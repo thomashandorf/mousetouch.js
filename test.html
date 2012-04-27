@@ -1,14 +1,14 @@
 <html>
 	<head>
-		<script type="text/javascript" src="../js/jquery-1.6.2.min.js"></script>
-		<script type="text/javascript" src="mousemove.js"></script>
+		<script type="text/javascript" src="jquery-1.7.2.min.js"></script>
+		<script type="text/javascript" src="mousetouch.js"></script>
 		<script type="text/javascript">
 		$(function() {
-			mousemove_register($('#element')[0],handler);
+			mousertouch.register($('#element')[0],handler);
 		});
-		function handler(e,first,last,outside){
+		function handler(e,gesture){
 			console.log(this);
-			console.log(e.pageX + ":" + e.pageY + "," + first + last + outside);
+			console.log(e.pageX + ":" + e.pageY);
 		}
 		</script>
 	</head>
