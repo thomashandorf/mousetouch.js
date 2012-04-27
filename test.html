@@ -1,0 +1,20 @@
+<html>
+	<head>
+		<script type="text/javascript" src="../js/jquery-1.6.2.min.js"></script>
+		<script type="text/javascript" src="mousemove.js"></script>
+		<script type="text/javascript">
+		$(function() {
+			mousemove_register($('#element')[0],handler);
+		});
+		function handler(e,first,last,outside){
+			console.log(this);
+			console.log(e.pageX + ":" + e.pageY + "," + first + last + outside);
+		}
+		</script>
+	</head>
+	<body>
+		<div id="container">
+		<div id="element" style="width:100px;height:100px;background-color:blue"></div>
+		</div>
+	</body>
+</html>
