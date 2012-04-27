@@ -1,4 +1,4 @@
-var mousetouch;
+
 
 (function(mousetouch){
    var mt; // private variables of mousetouch
@@ -117,4 +117,4 @@ var mousetouch;
       $(document).mousemove(move);
       $(document).bind('touchmove',move);
    });
-})(mousetouch);
+})(window.mousetouch={});
