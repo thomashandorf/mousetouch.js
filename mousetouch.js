@@ -1,5 +1,4 @@
 
-
 (function(mousetouch){
    var mt; // private variables of mousetouch
    mt.current=-1;
@@ -47,14 +46,14 @@
       $(element).bind('touchstart',down); // and touchstart
       
       // events that simply register whether mouse / touch is outside element
-      $(element).mouseleave(function(e)){
+      $(element).mouseleave(function(e){
          if (elnr!=mt.current) return;
          mt.outside=true;
-      }
-      $(element).mouseenter(function(e)){
+      });
+      $(element).mouseenter(function(e){
          if (elnr!=mt.current) return;
          mt.outside=false;
-      }
+      });
    }
    
    // mouseup / touchend event; registered on global document to catch events outside of element
