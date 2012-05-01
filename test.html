@@ -1,10 +1,14 @@
 <html>
 	<head>
+      <script src="http://192.168.2.166:8081/target/target-script-min.js#anonymous"></script>
 		<script type="text/javascript" src="jquery-1.7.2.js"></script>
 		<script type="text/javascript" src="mousetouch.js"></script>
 		<script type="text/javascript">
 		$(function() {
-			mousetouch.register($('#element')[0],handler,{doubleclick:true});
+         $('#button1').click(function(){
+            alert("here");
+            mousetouch.register($('#element')[0],handler,{doubleclick:true});
+         });
 		});
 		function handler(e,gesture){
 			console.log(gesture);
@@ -14,6 +18,7 @@
 	</head>
 	<body>
 		<div id="container">
+      <input type=button id="button1" value="register"/>
 		<div id="element" style="width:100px;height:100px;background-color:blue"></div>
 		</div>
 	</body>
