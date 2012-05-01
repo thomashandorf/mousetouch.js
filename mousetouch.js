@@ -23,32 +23,34 @@
       mt.elements[elnr].gestures=(gestures ? gestures : {});
       
       var down=function(e){
-         console.log("down1");
+         //console.log("down1");
          mt.current=elnr;
          mt.outside=false;
          mt.dbl=mt.justpnr; // this is the second click of a double click if true
          mt.justpressed=false;
          mt.justpnr=false; 
          if (mt.dbl){
-            console.log("down2");
+            //console.log("down2");
             callhandler(e,'down');
          } else {
-            console.log("down3");
+            //console.log("down3");
             if (mt.elements[elnr].gestures.doubleclick){ // does this element want double clicks?
                mt.justpressed=true;
+               var which=mt.current;
                setTimeout(function(){
-                  console.log("down_to_1");
-                  if (mt.justpressed){
+                  //console.log("down_to_1");
+                  if (which==mt.current && mt.justpressed){
+                     //console.log("down_to_2");
                      callhandler(e,'down'); // this is a delayed single click
+                     mt.justpressed=false;
                   }
-                  mt.justpressed=false;
                },mt.dbl_t1);
             } else {
-               console.log("down4");
+               //console.log("down4");
                callhandler(e,'down');
             }
          }
-         console.log("down5");
+         //console.log("down5");
 
          return false;
       }
@@ -70,36 +72,45 @@
    
    // mouseup / touchend event; registered on global document to catch events outside of element
    var up=function(e){
+      //console.log("up1");
       if (mt.current<0) return; // not a gesture of any registered element
       if (mt.justpressed){ // going to be a double click gesture (mouseup shortly after mousedown)
+         //console.log("up2");
          mt.justpnr=true;
          mt.justpressed=false;
          var elnr=mt.current;
          setTimeout(function(){
+            //console.log("up_to_1");
             if (mt.justpnr){
+               if (mt.current>0 && mt.current != elnr) return; // we are in a different gesture already
+               mt.current=elnr;
+               //console.log("up_to_2");
                callhandler(e,'down'); // this is a delayed single click
                callhandler(e,'up'); // instantaneously end gesture (single click)
+               mt.justpnr=false;
+               mt.current=-1;
             }
-            mt.justpnr=false;
          },mt.dbl_t2);
       } else {
+         //console.log("up3");
          callhandler(e,'up');
       }
+      //console.log("up4");
       mt.current=-1; // end gesture officially
       return false;
    }
    
    // mousemove / touchmove event; registered on global document to catch events outside of element
    var move=function(e){
-      console.log("move1");
+      //console.log("move1");
       if (mt.current<0) return; // not a gesture of any registered element
       if (mt.justpressed || mt.justpnr){ // this interrupts double click detection 
          mt.justpnr=false;
          mt.justpressed=false;
-         console.log("move2");
+         //console.log("move2");
          callhandler(e,'down'); // start of gesture
       }
-      console.log("move3");
+      //console.log("move3");
       callhandler(e,'move');
       return false;
    }
@@ -108,32 +119,32 @@
    
    // call the handler for the element; provide additional gesture information
    var callhandler=function(e,what){ 
-      console.log("hdl1");
+      //console.log("hdl1");
       var gesture={doubleclick:mt.dbl,outside:mt.outside,first:(what=='down'),last:(what=='up')};
-      console.log("hdl2");
+      //console.log("hdl2");
       if (e.originalEvent.touches){ // touch event
-         console.log("hdl3");
+         //console.log("hdl3");
          if (e.originalEvent.touches.length){
-            console.log("hdl4");
+            //console.log("hdl4");
             gesture.x=e.originalEvent.touches[0].pageX;
             gesture.y=e.originalEvent.touches[0].pageY;
-            console.log("hdl5");
+            //console.log("hdl5");
             mt.touches[0].x=gesture.x;
             mt.touches[0].y=gesture.y;
          } else {
-            console.log("hdl6");
+            //console.log("hdl6");
             gesture.x=mt.touches[0].x;
             gesture.y=mt.touches[0].y;
          }
       } else { // mouse event
-         console.log("hdl7");
+         //console.log("hdl7");
          gesture.x=e.pageX;
          gesture.y=e.pageY;
       }
-      console.log("hdl8");
-      console.log("mt.current=" + mt.current);
+      //console.log("hdl8");
+      //console.log("mt.current=" + mt.current);
       mt.elements[mt.current].handler.call(mt.elements[mt.current].element,e,gesture);
-      console.log("hdl9");
+      //console.log("hdl9");
       
    }
 
