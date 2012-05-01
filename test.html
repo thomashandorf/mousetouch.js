@@ -4,10 +4,10 @@
 		<script type="text/javascript" src="mousetouch.js"></script>
 		<script type="text/javascript">
 		$(function() {
-			mousetouch.register($('#element')[0],handler);
+			mousetouch.register($('#element')[0],handler,{doubleclick:true});
 		});
 		function handler(e,gesture){
-			console.log(this);
+			console.log(gesture);
 			console.log(e.pageX + ":" + e.pageY);
 		}
 		</script>

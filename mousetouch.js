@@ -1,6 +1,6 @@
 
 (function(mousetouch){
-   var mt; // private variables of mousetouch
+   var mt={}; // private variables of mousetouch
    mt.current=-1;
    mt.justpressed=false;
    mt.justpnr=false; // just pressed and released
@@ -17,9 +17,11 @@
    // function for registering mousetouch events for an element, gestures is hash e.g. {doubleclick=>1,...}
    mousetouch.register=function(element,handler,gestures){
       var elnr=mt.elements.length;
+      mt.elements[elnr]={};
       mt.elements[elnr].handler=handler;
-      mt.elements[elnr].el=element;
-      mt.elements[elnr].gestures=gestures;
+      mt.elements[elnr].element=element;
+      mt.elements[elnr].gestures=(gestures ? gestures : {});
+      
       var down=function(e){
          mt.current=elnr;
          mt.outside=false;
@@ -62,7 +64,7 @@
       if (mt.justpressed){ // going to be a double click gesture (mouseup shortly after mousedown)
          mt.justpnr=true;
          mt.justpressed=false;
-         var elnr=mousemove.current;
+         var elnr=mt.current;
          setTimeout(function(){
             if (mt.justpnr){
                callhandler(e,'down'); // this is a delayed single click
