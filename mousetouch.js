@@ -9,7 +9,7 @@
    mt.elements=[];
    mt.touches=[{},{},{},{},{},{}]; // last coordinates of touches
    mt.mouse={x:0,y:0}; // last coordinate of mouse
-   
+   mt.gesturelast=undefined;
    // double click timings
    mt.dbl_t1=300; // timing for release
    mt.dbl_t2=500; // timing for next down
@@ -31,7 +31,7 @@
          mt.justpnr=false; 
          if (mt.dbl){
             //console.log("down2");
-            callhandler(e,'down');
+            gesturehandler(e,'down');
          } else {
             //console.log("down3");
             if (mt.elements[elnr].gestures.doubleclick){ // does this element want double clicks?
@@ -41,13 +41,13 @@
                   //console.log("down_to_1");
                   if (which==mt.current && mt.justpressed){
                      //console.log("down_to_2");
-                     callhandler(e,'down'); // this is a delayed single click
+                     gesturehandler(e,'down'); // this is a delayed single click
                      mt.justpressed=false;
                   }
                },mt.dbl_t1);
             } else {
                //console.log("down4");
-               callhandler(e,'down');
+               gesturehandler(e,'down');
             }
          }
          //console.log("down5");
@@ -85,15 +85,15 @@
                if (mt.current>0 && mt.current != elnr) return; // we are in a different gesture already
                mt.current=elnr;
                //console.log("up_to_2");
-               callhandler(e,'down'); // this is a delayed single click
-               callhandler(e,'up'); // instantaneously end gesture (single click)
+               gesturehandler(e,'down'); // this is a delayed single click
+               gesturehandler(e,'up'); // instantaneously end gesture (single click)
                mt.justpnr=false;
                mt.current=-1;
             }
          },mt.dbl_t2);
       } else {
          //console.log("up3");
-         callhandler(e,'up');
+         gesturehandler(e,'up');
       }
       //console.log("up4");
       mt.current=-1; // end gesture officially
@@ -108,46 +108,93 @@
          mt.justpnr=false;
          mt.justpressed=false;
          //console.log("move2");
-         callhandler(e,'down'); // start of gesture
+         gesturehandler(e,'down'); // start of gesture
       }
       //console.log("move3");
-      callhandler(e,'move');
+      gesturehandler(e,'move');
       return false;
    }
    
    
    
    // call the handler for the element; provide additional gesture information
-   var callhandler=function(e,what){ 
+   var gesturehandler=function(e,what){ 
       //console.log("hdl1");
-      var gesture={doubleclick:mt.dbl,outside:mt.outside,first:(what=='down'),last:(what=='up')};
+      if (mt.gesturelast && (what=='up' || what=='down')){ // break last gesture
+         console.log("break gesture "+ what);
+         var gesture=mt.gesturelast;
+         gesture.first=false;
+         gesture.last=true;
+         mt.elements[mt.current].handler.call(mt.elements[mt.current].element,e,gesture);
+         mt.gesturelast=undefined;
+      }
+      var gesture={doubleclick:mt.dbl,outside:mt.outside};
       //console.log("hdl2");
-      if (e.originalEvent.touches){ // touch event
-         //console.log("hdl3");
-         if (e.originalEvent.touches.length){
-            //console.log("hdl4");
-            gesture.x=e.originalEvent.touches[0].pageX;
-            gesture.y=e.originalEvent.touches[0].pageY;
-            //console.log("hdl5");
-            mt.touches[0].x=gesture.x;
-            mt.touches[0].y=gesture.y;
+      if (e.originalEvent.changedTouches) { // touch event
+         doTouches(e.originalEvent,what,gesture);
+         if (mt.touches.length==0) return; // no gesture continues
+         if (what=='down' || what=='up'){ // gesture starts
+            gesture.first=true;
+            mt.start={x:gesture.x,y:gesture.y};
+            if (mt.touches.length==2){
+               mt.touchesnr=[];
+               for (var i in mt.touches){
+                  mt.touchesnr.push(mt.touches[i].identifier);
+               }
+               var d={x:mt.touches[mt.touchesnr[1]].pageX-mt.touches[mt.touchesnr[0]].pageX,y:mt.touches[mt.touchesnr[1]].pageY-mt.touches[mt.touchesnr[0]].pageY};
+               mt.startrot=Math.atan2(d.y,d.x);
+               mt.startd=Math.sqrt(d.x*d.x+d.y*d.y);
+            }
          } else {
-            //console.log("hdl6");
-            gesture.x=mt.touches[0].x;
-            gesture.y=mt.touches[0].y;
+           gesture.shift={x:gesture.x-mt.start.x,y:gesture.y-mt.start.y};
+            if (mt.touches.length==2){ // rotation & scale for two finger gestures
+               var d={x:mt.touches[mt.touchesnr[1]].pageX-mt.touches[mt.touchesnr[0]].pageX,y:mt.touches[mt.touchesnr[1]].pageY-mt.touches[mt.touchesnr[0]].pageY};
+               var rot=Math.atan2(d.y,d.x);
+               var drot=rot-mt.startrot;
+               if (drot>Math.PI) drot-=2*Math.PI;
+               if (drot<-Math.PI) drot+=2*Math.PI;
+               gesture.rotation=180*drot/Math.PI;
+               var ld=Math.sqrt(d.x*d.x+d.y*d.y);
+               gesture.scale=ld/mt.startd;
+            }
          }
+         //console.log("hdl3");
       } else { // mouse event
          //console.log("hdl7");
+         if (what=='up') return;
+         if (what=='down') gesture.first=true;
          gesture.x=e.pageX;
          gesture.y=e.pageY;
       }
       //console.log("hdl8");
       //console.log("mt.current=" + mt.current);
       mt.elements[mt.current].handler.call(mt.elements[mt.current].element,e,gesture);
+      mt.gesturelast=gesture;
       //console.log("hdl9");
       
    }
 
+   var doTouches=function(oe,what,gesture){
+      var i;
+      for (i in oe.changedTouches){
+         if (what == 'up'){
+            delete mt.touches[oe.changedTouches[i].identifier];
+         } else {
+            mt.touches[oe.changedTouches[i].identifier]=oe.changedTouches[i];
+         }
+      }
+      var x=0;
+      var y=0;
+      for (i in mt.touches){
+         x+=mt.touches[i].pageX;
+         y+=mt.touches[i].pageY;
+      }
+      x/=mt.touches.length;
+      y/=mt.touches.length;
+      gesture.x=x,
+      gesture.y=y;
+      return true;
+   }
    // register document event handlers after DOM ready
    $(function(){
       $(document).mouseup(up);
