@@ -7,10 +7,20 @@
 		$(function() {
          $('#button1').click(function(){
             alert("here");
-            mousetouch.register($('#element')[0],handler,{doubleclick:true});
+            mousetouch.register($('#div1')[0],handler,{doubleclick:true});
+            mousetouch.register($('#div2')[0],handler,{});
          });
 		});
 		function handler(e,gesture){
+			this.innerHTML=(gesture.first ? 'started<BR>' : '') +
+							(gesture.last ? 'finshed<BR>' : '') +
+							'pos: '+gesture.x + ","+gesture.y + 
+							(gesture.outside ? ' (outside)' : '') +
+							'<BR>' +
+							(gesture.doubleclick ? ' double-click<BR>' : '') +
+							(gesture.scale ? ' scale: ' + gesture.scale + '<BR>' : '') +
+							(gesture.rotation ? ' rotation: ' + gesture.rotation + '<BR>' : '');
+							
 			console.log(gesture);
 			console.log(e.pageX + ":" + e.pageY);
 		}
@@ -19,7 +29,12 @@
 	<body>
 		<div id="container">
       <input type=button id="button1" value="register"/>
-		<div id="element" style="width:100px;height:100px;background-color:blue"></div>
+		<div style="position:absolute;left:50px;top:50px;width:400px;height:300px">recieves double-click
+		<div id="div1" style="position:absolute;top:15;left:0;right:0;bottom:0;background-color:blue"></div>
+		</div>
+		<div style="position:absolute;left:550px;top:150px;width:400px;height:300px">does not recieve double-click
+				<div id="div2" style="position:absolute;top:15;left:0;right:0;bottom:0;background-color:orange"></div>
+		</div>
 		</div>
 	</body>
 </html>
