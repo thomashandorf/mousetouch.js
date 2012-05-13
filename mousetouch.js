@@ -7,7 +7,7 @@
    mt.dbl=false; // in double click gesture;
    mt.outside=false; // outside of current element;
    mt.elements=[];
-   mt.touches=[{},{},{},{},{},{}]; // last coordinates of touches
+   mt.touches={}; // last coordinates of touches
    mt.mouse={x:0,y:0}; // last coordinate of mouse
    mt.gesturelast=undefined;
    // double click timings
@@ -131,8 +131,10 @@
       var gesture={doubleclick:mt.dbl,outside:mt.outside};
       //console.log("hdl2");
       if (e.originalEvent.changedTouches) { // touch event
+		 console.log(e);
          doTouches(e.originalEvent,what,gesture);
-         if (mt.touches.length==0) return; // no gesture continues
+         console.log(JSON.stringify(gesture));
+		 if (mt.touches.length==0) return; // no gesture continues
          if (what=='down' || what=='up'){ // gesture starts
             gesture.first=true;
             mt.start={x:gesture.x,y:gesture.y};
@@ -176,23 +178,37 @@
 
    var doTouches=function(oe,what,gesture){
       var i;
-      for (i in oe.changedTouches){
-         if (what == 'up'){
-            delete mt.touches[oe.changedTouches[i].identifier];
+	  console.log(JSON.stringify(mt.touches));
+      for (i=0;i<oe.changedTouches.length;i++){
+	     if (!oe.changedTouches.hasOwnProperty(i)) continue;
+         var t=oe.changedTouches[i];
+		 if (what == 'up'){
+            delete mt.touches[t.identifier];
+			// FIXME need last position in "up" ????
          } else {
-            mt.touches[oe.changedTouches[i].identifier]=oe.changedTouches[i];
+			
+            mt.touches[t.identifier]={pageX:t.pageX,pageY:t.pageY,identifier:t.identifier};
          }
       }
       var x=0;
       var y=0;
+	  console.log(JSON.stringify(mt.touches));
+	  var len=0;
       for (i in mt.touches){
+	     if (!mt.touches.hasOwnProperty(i)) continue;
+         console.log(i);
+		 
          x+=mt.touches[i].pageX;
          y+=mt.touches[i].pageY;
+		 len++;
       }
-      x/=mt.touches.length;
-      y/=mt.touches.length;
-      gesture.x=x,
+	  console.log("x:" +x + "y:" +y);
+      x/=len;
+      y/=len;
+	  // FIXME: what if len==0;
+      gesture.x=x;
       gesture.y=y;
+	  console.log(JSON.stringify(gesture));
       return true;
    }
    // register document event handlers after DOM ready
