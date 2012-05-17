@@ -52,7 +52,7 @@
             }
          }
          //console.log("down5");
-
+         
          return false;
       }
       $(element).mousedown(down); // register down function to mousedown
@@ -61,12 +61,12 @@
       // events that simply register whether mouse / touch is outside element
       $(element).mouseleave(function(e){
          if (elnr!=mt.current) return;
-         mt.outside=true;
+                            mt.outside=true;
          return false;
       });
       $(element).mouseenter(function(e){
          if (elnr!=mt.current) return;
-         mt.outside=false;
+                            mt.outside=false;
          return false;
       });
    }
@@ -85,7 +85,7 @@
             if (mt.justpnr){
                if (mt.current>0 && mt.current != elnr) return; // we are in a different gesture already
                mt.current=elnr;
-               //console.log("up_to_2");
+      //console.log("up_to_2");
                gesturehandler(e,'down'); // this is a delayed single click
                gesturehandler(e,'up'); // instantaneously end gesture (single click)
                mt.justpnr=false;
@@ -134,37 +134,12 @@
       if (e.originalEvent.changedTouches) { // touch event
 		 //console.log(e);
          doTouches(e.originalEvent,what,gesture);
-         //console.log(JSON.stringify(gesture));
-		 console.log(JSON.stringify(mt.touches));
-		 if (mt.touchesidx.length==0) return; // no gesture continues
-         if (what=='down' || what=='up'){ // gesture starts
-            gesture.first=true;
-            mt.start={x:gesture.x,y:gesture.y};
-            if (mt.touchesidx.length==2){
-               var d={x:mt.touches[mt.touchesidx[1]].pageX-mt.touches[mt.touchesidx[0]].pageX,y:mt.touches[mt.touchesidx[1]].pageY-mt.touches[mt.touchesidx[0]].pageY};
-               mt.startrot=Math.atan2(d.y,d.x);
-               mt.startd=Math.sqrt(d.x*d.x+d.y*d.y);
-            }
-         } else {
-           gesture.shift={x:gesture.x-mt.start.x,y:gesture.y-mt.start.y};
-            if (mt.touchesidx.length==2){ // rotation & scale for two finger gestures
-               var d={x:mt.touches[mt.touchesidx[1]].pageX-mt.touches[mt.touchesidx[0]].pageX,y:mt.touches[mt.touchesidx[1]].pageY-mt.touches[mt.touchesidx[0]].pageY};
-               var rot=Math.atan2(d.y,d.x);
-               var drot=rot-mt.startrot;
-               if (drot>Math.PI) drot-=2*Math.PI;
-               if (drot<-Math.PI) drot+=2*Math.PI;
-               gesture.rotation=180*drot/Math.PI;
-               var ld=Math.sqrt(d.x*d.x+d.y*d.y);
-               gesture.scale=ld/mt.startd;
-            }
-         }
+       //console.log(JSON.stringify(gesture));
          //console.log("hdl3");
       } else { // mouse event
          //console.log("hdl7");
          if (what=='up') return;
-         if (what=='down') gesture.first=true;
-         gesture.x=e.pageX;
-         gesture.y=e.pageY;
+         doMouse(e,what,gesture);
       }
       //console.log("hdl8");
       //console.log("mt.current=" + mt.current);
@@ -173,58 +148,58 @@
       //console.log("hdl9");
       
    }
-
+   
+   // Mouse specific event handling
+   var doMouse=function(e,what,gesture){
+      if (what=='down') gesture.first=true;
+      gesture.x=e.pageX;
+      gesture.y=e.pageY;
+   }
+   // touch specific event handling
    var doTouches=function(oe,what,gesture){
       var i;
-	  //console.log(JSON.stringify(mt.touches));
-	  mt.touches={};
-	  mt.touchesidx=[];
+      //console.log(JSON.stringify(mt.touches));
+      mt.touches={};
+      mt.touchesidx=[];
       var x=0;
       var y=0;
-	  for (i=0;i<oe.touches.length;i++){
+      for (i=0;i<oe.touches.length;i++){
          var t=oe.touches[i];
          mt.touches[t.identifier]={pageX:t.pageX,pageY:t.pageY,identifier:t.identifier};
-		 mt.touchesidx.push(t.identifier);
+         mt.touchesidx.push(t.identifier);
          x+=t.pageX;
          y+=t.pageY;
-	  }
-	  mt.touchesidx.sort();
+      }
+      mt.touchesidx.sort();
       x/=mt.touchesidx.length;
       y/=mt.touchesidx.length;
-	  // FIXME: what if len==0;
+      // FIXME: what if len==0;
       gesture.x=x;
       gesture.y=y;
-	  //console.log(JSON.stringify(gesture));
+      console.log(JSON.stringify(mt.touches));
+      if (mt.touchesidx.length==0) return; // no gesture continues
+      if (what=='down' || what=='up'){ // gesture starts
+         gesture.first=true;
+         mt.start={x:gesture.x,y:gesture.y};
+         if (mt.touchesidx.length==2){
+            var d={x:mt.touches[mt.touchesidx[1]].pageX-mt.touches[mt.touchesidx[0]].pageX,y:mt.touches[mt.touchesidx[1]].pageY-mt.touches[mt.touchesidx[0]].pageY};
+            mt.startrot=Math.atan2(d.y,d.x);
+            mt.startd=Math.sqrt(d.x*d.x+d.y*d.y);
+         }
+      } else {
+         gesture.shift={x:gesture.x-mt.start.x,y:gesture.y-mt.start.y};
+         if (mt.touchesidx.length==2){ // rotation & scale for two finger gestures
+            var d={x:mt.touches[mt.touchesidx[1]].pageX-mt.touches[mt.touchesidx[0]].pageX,y:mt.touches[mt.touchesidx[1]].pageY-mt.touches[mt.touchesidx[0]].pageY};
+            var rot=Math.atan2(d.y,d.x);
+            var drot=rot-mt.startrot;
+            if (drot>Math.PI) drot-=2*Math.PI;
+            if (drot<-Math.PI) drot+=2*Math.PI;
+            gesture.rotation=180*drot/Math.PI;
+            var ld=Math.sqrt(d.x*d.x+d.y*d.y);
+            gesture.scale=ld/mt.startd;
+         }
+      }
       return;
-      // for (i=0;i<oe.changedTouches.length;i++){
-         // var t=oe.changedTouches[i];
-		 // if (what == 'up'){
-            // delete mt.touches[t.identifier];
-			// // FIXME need last position in "up" ????
-         // } else {
-			
-            // mt.touches[t.identifier]={pageX:t.pageX,pageY:t.pageY,identifier:t.identifier};
-         // }
-      // }
-      // var x=0;
-      // var y=0;
-	  // //console.log(JSON.stringify(mt.touches));
-      // mt.touchesidx=[];
-      // for (i in mt.touches){
-	     // if (!mt.touches.hasOwnProperty(i)) continue;
-         // //console.log(i);
-		 // mt.touchesidx.push(mt.touches[i].identifier);
-         // x+=mt.touches[i].pageX;
-         // y+=mt.touches[i].pageY;
-      // }
-	  // //console.log("x:" +x + "y:" +y);
-      // x/=mt.touchesidx.length;
-      // y/=mt.touchesidx.length;
-	  // // FIXME: what if len==0;
-      // gesture.x=x;
-      // gesture.y=y;
-	  // //console.log(JSON.stringify(gesture));
-      // return true;
    }
    // register document event handlers after DOM ready
    $(function(){
@@ -232,6 +207,6 @@
       $(document).bind('touchend',up);
       $(document).mousemove(move);
       $(document).bind('touchmove',move);
-	  $(document).bind('touchcancel',up);
+      $(document).bind('touchcancel',up);
    });
 })(window.mousetouch={});
