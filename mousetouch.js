@@ -72,6 +72,16 @@
       $(element).bind("contextmenu",function(e){ // FIXME make this optional
             return false; // disable context menu;
       });
+      $(element).bind("mousewheel",function(e){
+         mt.current=elnr;
+         mt.outside=false;
+         mt.dbl=false; // this is the second click of a double click if true
+         mt.justpressed=false;
+         mt.justpnr=false; 
+         gesturehandler(e,'wheel');
+         mt.current=-1; // end gesture officially
+         return false;
+      }); 
    }
    
    // mouseup / touchend event; registered on global document to catch events outside of element
@@ -124,7 +134,7 @@
    // call the handler for the element; provide additional gesture information
    var gesturehandler=function(e,what){ 
       //console.log("hdl1");
-      if (mt.gesturelast && (what=='up' || what=='down')){ // break last gesture
+      if (mt.gesturelast && (what=='up' || what=='down' || what=='wheel')){ // break last gesture
          console.log("break gesture "+ what);
          var gesture=mt.gesturelast;
          gesture.first=false;
@@ -159,6 +169,18 @@
       var el=mt.elements[mt.current].element;
       var cx=$(el).offset().left+$(el).width()/2;
       var cy=$(el).offset().top+$(el).height()/2;
+      if (what=='wheel'){
+         var delta;
+         if (event.wheelDelta) { /* IE/Opera. */
+            delta = event.wheelDelta/120;
+         } else if (event.detail) { /** Mozilla case. */
+            /** In Mozilla, sign of delta is different than in IE.
+             * Also, delta is multiple of 3.
+             */
+            delta = -event.detail/3;
+         }
+         gesture.scale=Math.pow(1.2,delta);
+      }
       if (what=='down') {
          gesture.first=true;
          mt.start={x:gesture.x,y:gesture.y};
