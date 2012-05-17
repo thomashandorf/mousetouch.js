@@ -69,6 +69,9 @@
                             mt.outside=false;
          return false;
       });
+      $(element).bind("contextmenu",function(e){ // FIXME make this optional
+            return false; // disable context menu;
+      });
    }
    
    // mouseup / touchend event; registered on global document to catch events outside of element
@@ -151,9 +154,26 @@
    
    // Mouse specific event handling
    var doMouse=function(e,what,gesture){
-      if (what=='down') gesture.first=true;
       gesture.x=e.pageX;
       gesture.y=e.pageY;
+      var el=mt.elements[mt.current].element;
+      var cx=$(el).offset().left+$(el).width()/2;
+      var cy=$(el).offset().top+$(el).height()/2;
+      if (what=='down') {
+         gesture.first=true;
+         mt.start={x:gesture.x,y:gesture.y};
+         mt.startrot=Math.atan2(gesture.y-cy,gesture.x-cx);
+      }
+      if (e.button==2){ // rotate gesture on mouse
+         var rot=Math.atan2(gesture.y-cy,gesture.x-cx);
+         var drot=rot-mt.startrot;
+         if (drot>Math.PI) drot-=2*Math.PI;
+         if (drot<-Math.PI) drot+=2*Math.PI;
+         gesture.rotation=180*drot/Math.PI;
+         
+      } else {
+         gesture.shift={x:gesture.x-mt.start.x,y:gesture.y-mt.start.y};
+      }
    }
    // touch specific event handling
    var doTouches=function(oe,what,gesture){
