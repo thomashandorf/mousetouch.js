@@ -25,6 +25,10 @@
       
       var down=function(e){
          //console.log("down1");
+         if (e.pageX!=undefined){ 
+            mt.mouse.x=e.pageX; // save current mouse coordinate
+            mt.mouse.y=e.pageY;
+         }
          mt.current=elnr;
          mt.outside=false;
          mt.dbl=mt.justpnr; // this is the second click of a double click if true
@@ -117,6 +121,10 @@
    // mousemove / touchmove event; registered on global document to catch events outside of element
    var move=function(e){
       //console.log("move1");
+      if (e.pageX!=undefined){ 
+         mt.mouse.x=e.pageX; // save current mouse coordinate
+         mt.mouse.y=e.pageY;
+      }
       if (mt.current<0) return; // not a gesture of any registered element
       if (mt.justpressed || mt.justpnr){ // this interrupts double click detection 
          mt.justpnr=false;
@@ -166,6 +174,10 @@
    var doMouse=function(e,what,gesture){
       gesture.x=e.pageX;
       gesture.y=e.pageY;
+      if (gesture.x === undefined){ // happens e.g. for mousewheel
+         gesture.x=mt.mouse.x;
+         gesture.y=mt.mouse.y;
+      }
       var el=mt.elements[mt.current].element;
       var cx=$(el).offset().left+$(el).width()/2;
       var cy=$(el).offset().top+$(el).height()/2;
@@ -180,7 +192,7 @@
             delta = -event.detail/3;
          }
          gesture.scale=Math.pow(1.2,delta);
-         gesture.start={x:e.pageX,y:e.pageY};
+         gesture.start={x:gesture.x,y:gesture.x};
          gesture.shift={x:0,y:0};
          gesture.rotation=0;
       } else if (e.button==2){ // rotate gesture on mouse
