@@ -181,6 +181,11 @@
       var el=mt.elements[mt.current].element;
       var cx=$(el).offset().left+$(el).width()/2;
       var cy=$(el).offset().top+$(el).height()/2;
+      if (what=='down') {
+         gesture.first=true;
+         mt.start={x:gesture.x,y:gesture.y};
+         mt.startrot=Math.atan2(gesture.y-cy,gesture.x-cx);
+      }
       if (what=='wheel'){
          var delta;
          if (event.wheelDelta) { /* IE/Opera. */
@@ -202,14 +207,6 @@
          if (drot<-Math.PI) drot+=2*Math.PI;
          gesture.rotation=180*drot/Math.PI;
          gesture.start={x:cx,y:cy};
-         gesture.shift={x:0,y:0};
-         gesture.scale=1;
-      } else if (what=='down') {
-         gesture.first=true;
-         mt.start={x:gesture.x,y:gesture.y};
-         mt.startrot=Math.atan2(gesture.y-cy,gesture.x-cx);
-         gesture.start={x:mt.start.x,y:mt.start.y};
-         gesture.rotation=0;
          gesture.shift={x:0,y:0};
          gesture.scale=1;
       } else {
