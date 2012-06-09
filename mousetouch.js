@@ -192,7 +192,7 @@
             delta = -event.detail/3;
          }
          gesture.scale=Math.pow(1.2,delta);
-         gesture.start={x:gesture.x,y:gesture.x};
+         gesture.start={x:gesture.x,y:gesture.y};
          gesture.shift={x:0,y:0};
          gesture.rotation=0;
       } else if (e.button==2){ // rotate gesture on mouse
@@ -208,6 +208,10 @@
          gesture.first=true;
          mt.start={x:gesture.x,y:gesture.y};
          mt.startrot=Math.atan2(gesture.y-cy,gesture.x-cx);
+         gesture.start={x:mt.start.x,y:mt.start.y};
+         gesture.rotation=0;
+         gesture.shift={x:0,y:0};
+         gesture.scale=1;
       } else {
          gesture.scale=1;
          gesture.start={x:mt.start.x,y:mt.start.y};
