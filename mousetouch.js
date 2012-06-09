@@ -180,20 +180,26 @@
             delta = -event.detail/3;
          }
          gesture.scale=Math.pow(1.2,delta);
-      }
-      if (what=='down') {
-         gesture.first=true;
-         mt.start={x:gesture.x,y:gesture.y};
-         mt.startrot=Math.atan2(gesture.y-cy,gesture.x-cx);
-      }
-      if (e.button==2){ // rotate gesture on mouse
+         gesture.start={x:e.pageX,y:e.pageY};
+         gesture.shift={x:0,y:0};
+         gesture.rotation=0;
+      } else if (e.button==2){ // rotate gesture on mouse
          var rot=Math.atan2(gesture.y-cy,gesture.x-cx);
          var drot=rot-mt.startrot;
          if (drot>Math.PI) drot-=2*Math.PI;
          if (drot<-Math.PI) drot+=2*Math.PI;
          gesture.rotation=180*drot/Math.PI;
-         
+         gesture.start={x:cx,y:cy};
+         gesture.shift={x:0,y:0};
+         gesture.scale=1;
+      } else if (what=='down') {
+         gesture.first=true;
+         mt.start={x:gesture.x,y:gesture.y};
+         mt.startrot=Math.atan2(gesture.y-cy,gesture.x-cx);
       } else {
+         gesture.scale=1;
+         gesture.start={x:mt.start.x,y:mt.start.y};
+         gesture.rotation=0;
          gesture.shift={x:gesture.x-mt.start.x,y:gesture.y-mt.start.y};
       }
    }
