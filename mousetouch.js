@@ -242,12 +242,17 @@
       if (what=='down' || what=='up'){ // gesture starts
          gesture.first=true;
          mt.start={x:gesture.x,y:gesture.y};
+         gesture.start={x:gesture.x,y:gesture.y};
+         gesture.shift={x:0,y:0};
          if (mt.touchesidx.length==2){
             var d={x:mt.touches[mt.touchesidx[1]].pageX-mt.touches[mt.touchesidx[0]].pageX,y:mt.touches[mt.touchesidx[1]].pageY-mt.touches[mt.touchesidx[0]].pageY};
             mt.startrot=Math.atan2(d.y,d.x);
             mt.startd=Math.sqrt(d.x*d.x+d.y*d.y);
          }
+         gesture.scale=1;
+         gesture.rotation=0;
       } else {
+         gesture.start={x:mt.start.x,y:mt.start.y};
          gesture.shift={x:gesture.x-mt.start.x,y:gesture.y-mt.start.y};
          if (mt.touchesidx.length==2){ // rotation & scale for two finger gestures
             var d={x:mt.touches[mt.touchesidx[1]].pageX-mt.touches[mt.touchesidx[0]].pageX,y:mt.touches[mt.touchesidx[1]].pageY-mt.touches[mt.touchesidx[0]].pageY};
@@ -258,6 +263,9 @@
             gesture.rotation=180*drot/Math.PI;
             var ld=Math.sqrt(d.x*d.x+d.y*d.y);
             gesture.scale=ld/mt.startd;
+         } else {
+            gesture.scale=1;
+            gesture.rotation=0;
          }
       }
       return;
