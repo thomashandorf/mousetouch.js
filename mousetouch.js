@@ -15,6 +15,51 @@
    mt.dbl_t1=300; // timing for release
    mt.dbl_t2=500; // timing for next down
    
+   //generalized event binding & handling without jquery or similar
+   
+   var bnd=function( elem, type, eventHandle){
+      var handler=function(event){
+         // crossbrowser pageXY from jquery
+         // Calculate pageX/Y if missing and clientX/Y available 
+         if ( event.pageX == null && event.clientX != null ) {
+            eventDoc = event.target.ownerDocument || document;
+            doc = eventDoc.documentElement;
+            body = eventDoc.body;
+            
+            event.pageX = event.clientX + ( doc && doc.scrollLeft || body && body.scrollLeft || 0 ) - ( doc && doc.clientLeft || body && body.clientLeft || 0 );
+            event.pageY = event.clientY + ( doc && doc.scrollTop  || body && body.scrollTop  || 0 ) - ( doc && doc.clientTop  || body && body.clientTop  || 0 );
+         }
+         
+         // Add which for click: 1 === left; 2 === middle; 3 === right
+         // Note: button is not normalized, so don't use it
+         if ( !event.which && event.button !== undefined ) {
+            event.which = ( event.button & 1 ? 1 : ( event.button & 2 ? 3 : ( event.button & 4 ? 2 : 0 ) ) );
+         }
+         
+         if (!(eventHandle.call(elem,event))){
+            event.preventDefault();
+            event.stopPropagation();
+         }
+      }
+      if ( elem.addEventListener ) {
+         elem.addEventListener( type, handler, false );
+      } else if ( elem.attachEvent ) {
+         elem.attachEvent( "on" + type, handler );
+      }
+   }
+   
+   // cheap domready handler
+   
+   var domready=function(handler){
+      var timer = setInterval( function (){
+         if ( document && document.getElementsByTagName && 
+            document.getElementById && document.body ) {
+            clearInterval( timer );
+            handler();
+         }
+      },1);
+   }
+   
    // function for registering mousetouch events for an element, gestures is hash e.g. {doubleclick=>1,...}
    mousetouch.register=function(element,handler,gestures){
       var elnr=mt.elements.length;
@@ -59,24 +104,24 @@
          
          return false;
       }
-      $(element).mousedown(down); // register down function to mousedown
-      $(element).bind('touchstart',down); // and touchstart
+      bnd(element,'mousedown',down); // register down function to mousedown
+      bnd(element,'touchstart',down); // and touchstart
       
       // events that simply register whether mouse / touch is outside element
-      $(element).mouseleave(function(e){
+      bnd(element,'mouseleave',function(e){
          if (elnr!=mt.current) return;
-                            mt.outside=true;
+         mt.outside=true;
          return false;
       });
-      $(element).mouseenter(function(e){
+      bnd(element,'mouseenter',function(e){
          if (elnr!=mt.current) return;
-                            mt.outside=false;
+         mt.outside=false;
          return false;
       });
-      $(element).bind("contextmenu",function(e){ // FIXME make this optional
+      bnd(element,"contextmenu",function(e){ // FIXME make this optional
             return false; // disable context menu;
       });
-      $(element).bind("mousewheel",function(e){
+      bnd(element,"mousewheel",function(e){
          mt.current=elnr;
          mt.outside=false;
          mt.dbl=false; // this is the second click of a double click if true
@@ -152,9 +197,9 @@
       }
       var gesture={doubleclick:mt.dbl,outside:mt.outside};
       //console.log("hdl2");
-      if (e.originalEvent.changedTouches) { // touch event
+      if (e.changedTouches) { // touch event
 		 //console.log(e);
-         doTouches(e.originalEvent,what,gesture);
+         doTouches(e,what,gesture);
        //console.log(JSON.stringify(gesture));
          //console.log("hdl3");
       } else { // mouse event
@@ -271,11 +316,11 @@
       return;
    }
    // register document event handlers after DOM ready
-   $(function(){
-      $(document).mouseup(up);
-      $(document).bind('touchend',up);
-      $(document).mousemove(move);
-      $(document).bind('touchmove',move);
-      $(document).bind('touchcancel',up);
+   domready(function(){
+      bnd(document,'mouseup',up);
+      bnd(document,'touchend',up);
+      bnd(document,'mousemove',move);
+      bnd(document,'touchmove',move);
+      bnd(document,'touchcancel',up);
    });
 })(window.mousetouch={});
