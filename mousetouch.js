@@ -11,6 +11,7 @@
    mt.touchesidx=[];
    mt.mouse={x:0,y:0}; // last coordinate of mouse
    mt.gesturelast=undefined;
+   mt.button=0; // pressed button
    // double click timings
    mt.dbl_t1=300; // timing for release
    mt.dbl_t2=500; // timing for next down
@@ -75,6 +76,7 @@
             mt.mouse.y=e.pageY;
          }
          mt.current=elnr;
+         mt.button=e.button; // FIXME this will only allow single button gestures; in general multibutton gesture will certainly need a document mousedown handler
          mt.outside=false;
          mt.dbl=mt.justpnr; // this is the second click of a double click if true
          mt.justpressed=false;
@@ -121,7 +123,7 @@
       bnd(element,"contextmenu",function(e){ // FIXME make this optional
             return false; // disable context menu;
       });
-      bnd(element,"mousewheel",function(e){
+      var wheel= function(e){
          mt.current=elnr;
          mt.outside=false;
          mt.dbl=false; // this is the second click of a double click if true
@@ -130,7 +132,9 @@
          gesturehandler(e,'wheel');
          mt.current=-1; // end gesture officially
          return false;
-      }); 
+      } 
+      bnd(element,"mousewheel",wheel);
+      bnd(element,"DOMMouseScroll",wheel);
    }
    
    // mouseup / touchend event; registered on global document to catch events outside of element
@@ -233,19 +237,19 @@
       }
       if (what=='wheel'){
          var delta;
-         if (event.wheelDelta) { /* IE/Opera. */
-            delta = event.wheelDelta/120;
-         } else if (event.detail) { /** Mozilla case. */
+         if (e.wheelDelta) { /* IE/Opera. */
+            delta = e.wheelDelta/120;
+         } else if (e.detail) { /** Mozilla case. */
             /** In Mozilla, sign of delta is different than in IE.
              * Also, delta is multiple of 3.
              */
-            delta = -event.detail/3;
+            delta = -e.detail/3;
          }
          gesture.scale=Math.pow(1.2,delta);
          gesture.start={x:gesture.x,y:gesture.y};
          gesture.shift={x:0,y:0};
          gesture.rotation=0;
-      } else if (e.button==2){ // rotate gesture on mouse
+      } else if (mt.button==2){ // rotate gesture on mouse
          var rot=Math.atan2(gesture.y-cy,gesture.x-cx);
          var drot=rot-mt.startrot;
          if (drot>Math.PI) drot-=2*Math.PI;
