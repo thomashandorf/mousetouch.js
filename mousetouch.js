@@ -203,7 +203,7 @@
       //console.log("hdl2");
       if (e.changedTouches) { // touch event
 		 //console.log(e);
-         doTouches(e,what,gesture);
+         if (!doTouches(e,what,gesture)) return; // no more gesture if all touches have finished; last up gesture has been handled already above
        //console.log(JSON.stringify(gesture));
          //console.log("hdl3");
       } else { // mouse event
@@ -249,6 +249,7 @@
          gesture.start={x:gesture.x,y:gesture.y};
          gesture.shift={x:0,y:0};
          gesture.rotation=0;
+         gesture.istransform=true;
       } else if (mt.button==2){ // rotate gesture on mouse
          var rot=Math.atan2(gesture.y-cy,gesture.x-cx);
          var drot=rot-mt.startrot;
@@ -258,6 +259,7 @@
          gesture.start={x:cx,y:cy};
          gesture.shift={x:0,y:0};
          gesture.scale=1;
+         gesture.istransform=true;
       } else {
          gesture.scale=1;
          gesture.start={x:mt.start.x,y:mt.start.y};
@@ -280,14 +282,14 @@
          x+=t.pageX;
          y+=t.pageY;
       }
+      if (mt.touchesidx.length==0) return false; // no gesture continues
       mt.touchesidx.sort();
       x/=mt.touchesidx.length;
       y/=mt.touchesidx.length;
       // FIXME: what if len==0;
       gesture.x=x;
       gesture.y=y;
-      console.log(JSON.stringify(mt.touches));
-      if (mt.touchesidx.length==0) return; // no gesture continues
+      //console.log(JSON.stringify(mt.touches));
       if (what=='down' || what=='up'){ // gesture starts
          gesture.first=true;
          mt.start={x:gesture.x,y:gesture.y};
@@ -297,6 +299,7 @@
             var d={x:mt.touches[mt.touchesidx[1]].pageX-mt.touches[mt.touchesidx[0]].pageX,y:mt.touches[mt.touchesidx[1]].pageY-mt.touches[mt.touchesidx[0]].pageY};
             mt.startrot=Math.atan2(d.y,d.x);
             mt.startd=Math.sqrt(d.x*d.x+d.y*d.y);
+            gesture.istransform=true;
          }
          gesture.scale=1;
          gesture.rotation=0;
@@ -312,12 +315,13 @@
             gesture.rotation=180*drot/Math.PI;
             var ld=Math.sqrt(d.x*d.x+d.y*d.y);
             gesture.scale=ld/mt.startd;
+            gesture.istransform=true;
          } else {
             gesture.scale=1;
             gesture.rotation=0;
          }
       }
-      return;
+      return true;
    }
    // register document event handlers after DOM ready
    domready(function(){
