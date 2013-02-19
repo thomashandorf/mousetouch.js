@@ -37,7 +37,7 @@
             event.which = ( event.button & 1 ? 1 : ( event.button & 2 ? 3 : ( event.button & 4 ? 2 : 0 ) ) );
          }
          
-         if (!(eventHandle.call(elem,event))){
+         if (eventHandle.call(elem,event)===false){
             event.preventDefault();
             event.stopPropagation();
          }
