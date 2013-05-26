@@ -81,6 +81,7 @@
          mt.dbl=mt.justpnr; // this is the second click of a double click if true
          mt.justpressed=false;
          mt.justpnr=false; 
+         mt.down_e=e;
          if (mt.dbl){
             //console.log("down2");
             gesturehandler(e,'down');
@@ -152,7 +153,7 @@
                if (mt.current>0 && mt.current != elnr) return; // we are in a different gesture already
                mt.current=elnr;
       //console.log("up_to_2");
-               gesturehandler(e,'down'); // this is a delayed single click
+               gesturehandler(mt.down_e,'down'); // this is a delayed single click
                gesturehandler(e,'up'); // instantaneously end gesture (single click)
                mt.justpnr=false;
                mt.current=-1;
