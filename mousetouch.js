@@ -39,7 +39,7 @@
          }
          
          if (eventHandle.call(elem,event)===false){
-            event.preventDefault();
+            // event.preventDefault();
             event.stopPropagation();
          }
       }
