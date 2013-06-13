@@ -1,5 +1,6 @@
 
 (function(mousetouch){
+   var debug=false;
    var mt={}; // private variables of mousetouch
    mt.current=-1;
    mt.justpressed=false;
@@ -70,7 +71,7 @@
       mt.elements[elnr].gestures=(gestures ? gestures : {});
       
       var down=function(e){
-         //console.log("down1");
+         if (debug) console.log("down1");
          if (e.pageX!=undefined){ 
             mt.mouse.x=e.pageX; // save current mouse coordinate
             mt.mouse.y=e.pageY;
@@ -83,27 +84,27 @@
          mt.justpnr=false; 
          mt.down_e=e;
          if (mt.dbl){
-            //console.log("down2");
+            if (debug) console.log("down2");
             gesturehandler(e,'down');
          } else {
-            //console.log("down3");
+            if (debug) console.log("down3");
             if (mt.elements[elnr].gestures.doubleclick){ // does this element want double clicks?
                mt.justpressed=true;
                var which=mt.current;
                setTimeout(function(){
-                  //console.log("down_to_1");
+                  if (debug) console.log("down_to_1");
                   if (which==mt.current && mt.justpressed){
-                     //console.log("down_to_2");
+                     if (debug) console.log("down_to_2");
                      gesturehandler(e,'down'); // this is a delayed single click
                      mt.justpressed=false;
                   }
                },mt.dbl_t1);
             } else {
-               //console.log("down4");
+               if (debug) console.log("down4");
                gesturehandler(e,'down');
             }
          }
-         //console.log("down5");
+         if (debug) console.log("down5");
          
          return false;
       }
@@ -140,19 +141,19 @@
    
    // mouseup / touchend event; registered on global document to catch events outside of element
    var up=function(e){
-      //console.log("up1");
+      if (debug) console.log("up1");
       if (mt.current<0) return; // not a gesture of any registered element
       if (mt.justpressed){ // going to be a double click gesture (mouseup shortly after mousedown)
-         //console.log("up2");
+         if (debug) console.log("up2");
          mt.justpnr=true;
          mt.justpressed=false;
          var elnr=mt.current;
          setTimeout(function(){
-            //console.log("up_to_1");
+            if (debug) console.log("up_to_1");
             if (mt.justpnr){
                if (mt.current>0 && mt.current != elnr) return; // we are in a different gesture already
                mt.current=elnr;
-      //console.log("up_to_2");
+      if (debug) console.log("up_to_2");
                gesturehandler(mt.down_e,'down'); // this is a delayed single click
                gesturehandler(e,'up'); // instantaneously end gesture (single click)
                mt.justpnr=false;
@@ -160,17 +161,17 @@
             }
          },mt.dbl_t2);
       } else {
-         //console.log("up3");
+         if (debug) console.log("up3");
          gesturehandler(e,'up');
       }
-      //console.log("up4");
+      if (debug) console.log("up4");
       mt.current=-1; // end gesture officially
       return false;
    }
    
    // mousemove / touchmove event; registered on global document to catch events outside of element
    var move=function(e){
-      //console.log("move1");
+      if (debug) console.log("move1");
       if (e.pageX!=undefined){ 
          mt.mouse.x=e.pageX; // save current mouse coordinate
          mt.mouse.y=e.pageY;
@@ -179,10 +180,10 @@
       if (mt.justpressed || mt.justpnr){ // this interrupts double click detection 
          mt.justpnr=false;
          mt.justpressed=false;
-         //console.log("move2");
+         if (debug) console.log("move2");
          gesturehandler(e,'down'); // start of gesture
       }
-      //console.log("move3");
+      if (debug) console.log("move3");
       gesturehandler(e,'move');
       return false;
    }
@@ -191,7 +192,7 @@
    
    // call the handler for the element; provide additional gesture information
    var gesturehandler=function(e,what){ 
-      //console.log("hdl1");
+      if (debug) console.log("hdl1");
       if (mt.gesturelast && (what=='up' || what=='down' || what=='wheel')){ // break last gesture
          console.log("break gesture "+ what);
          var gesture=mt.gesturelast;
@@ -201,22 +202,23 @@
          mt.gesturelast=undefined;
       }
       var gesture={doubleclick:mt.dbl,outside:mt.outside};
-      //console.log("hdl2");
+      if (debug) console.log("hdl2");
       if (e.changedTouches) { // touch event
-		 //console.log(e);
+		 if (debug) console.log(e);
          if (!doTouches(e,what,gesture)) return; // no more gesture if all touches have finished; last up gesture has been handled already above
-       //console.log(JSON.stringify(gesture));
-         //console.log("hdl3");
+       if (debug) console.log(JSON.stringify(gesture));
+         if (debug) console.log("hdl3");
       } else { // mouse event
-         //console.log("hdl7");
+         if (debug) console.log("hdl7");
          if (what=='up') return;
          doMouse(e,what,gesture);
       }
-      //console.log("hdl8");
-      //console.log("mt.current=" + mt.current);
+      if (debug) console.log("hdl8");
+      if (debug) console.log("mt.current=" + mt.current);
+      console.log(gesture);
       mt.elements[mt.current].handler.call(mt.elements[mt.current].element,e,gesture);
       mt.gesturelast=gesture;
-      //console.log("hdl9");
+      if (debug) console.log("hdl9");
       
    }
    
@@ -271,7 +273,7 @@
    // touch specific event handling
    var doTouches=function(oe,what,gesture){
       var i;
-      //console.log(JSON.stringify(mt.touches));
+      if (debug) console.log(JSON.stringify(mt.touches));
       mt.touches={};
       mt.touchesidx=[];
       var x=0;
@@ -290,7 +292,7 @@
       // FIXME: what if len==0;
       gesture.x=x;
       gesture.y=y;
-      //console.log(JSON.stringify(mt.touches));
+      if (debug) console.log(JSON.stringify(mt.touches));
       if (what=='down' || what=='up'){ // gesture starts
          gesture.first=true;
          mt.start={x:gesture.x,y:gesture.y};
