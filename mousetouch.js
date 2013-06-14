@@ -39,7 +39,7 @@
          }
          
          if (eventHandle.call(elem,event)===false){
-            // event.preventDefault();
+            if (mt.button==2) event.preventDefault(); //REFACTOR this just patches the context menu on rotate
             event.stopPropagation();
          }
       }
@@ -248,9 +248,12 @@
              */
             delta = -e.detail/3;
          }
-         gesture.scale=Math.pow(1.2,delta);
+         gesture.scale=1;
          gesture.start={x:gesture.x,y:gesture.y};
-         gesture.shift={x:0,y:0};
+         gesture.shift={x:0,y:delta*20};
+         // gesture.scale=Math.pow(1.2,delta);
+         // gesture.start={x:gesture.x,y:gesture.y};
+         // gesture.shift={x:0,y:0};
          gesture.rotation=0;
          gesture.istransform=true;
       } else if (mt.button==2){ // rotate gesture on mouse
@@ -262,6 +265,13 @@
          gesture.start={x:cx,y:cy};
          gesture.shift={x:0,y:0};
          gesture.scale=1;
+         gesture.istransform=true;
+      } else if (mt.button==1){ // scale gesture on mouse
+         var dist=(cx-gesture.x-cy+gesture.y)/100;
+         gesture.scale=(dist!=0 ? Math.pow(2,dist) : 1);
+         gesture.rotation=0;
+         gesture.start={x:cx,y:cy};
+         gesture.shift={x:0,y:0};
          gesture.istransform=true;
       } else {
          gesture.scale=1;
