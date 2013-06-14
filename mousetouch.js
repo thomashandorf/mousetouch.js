@@ -39,7 +39,8 @@
          }
          
          if (eventHandle.call(elem,event)===false){
-            if (mt.button==2) event.preventDefault(); //REFACTOR this just patches the context menu on rotate
+            if (event.button==2) event.preventDefault(); //REFACTOR this just patches the context menu on rotate
+            if (event.type=='touchmove') event.preventDefault(); //REFACTOR 
             event.stopPropagation();
          }
       }
