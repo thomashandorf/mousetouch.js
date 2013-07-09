@@ -18,6 +18,8 @@ var mousetouch = mousetouch || {};
   var __mousetouch_defaults = {
     waitdoubleclick: false, // don't send out downs immidiately, wait whether it's going to be a double click
     cancelgestures: true, // if number of buttons/fingers changes, send out an extra cancel event for existing gesture
+    preventdefault: true, // always call preventDefault on all observed events
+    preventdefault_move: true, // prevent default on move events
     debug: true,
     double_ms: 300, // double click: time in which first up must occure AND time in which 2dn down must occur after 1st up
     long_ms: 500, // time to be considered as long click
@@ -206,6 +208,10 @@ var mousetouch = mousetouch || {};
 
     // feed in more gesture data
     gesture_fill(gesture, e);
+    // call preventDefault for event if configured for move events
+    if (config('preventdefault_move')) {
+      e.preventDefault();
+    }
     //go
 
     gesture_send(gesture);
@@ -416,7 +422,8 @@ var mousetouch = mousetouch || {};
         }, config('touchquarantine_ms'))
       }
       //ignore mouse event after touch event
-      if (in_touch && e instanceof MouseEvent){
+      if (in_touch && e instanceof MouseEvent) {
+        if (config('debug')) console.log("mouse event "+e.type+" ignored.");
         return;
       }
       // crossbrowser pageXY from jquery
@@ -462,6 +469,9 @@ var mousetouch = mousetouch || {};
 
       console.log("event: " + e.type + ", crtlID: " + crtlID);
 
+      if (config('preventdefault') && (current !== undefined || e.type === 'mousedown' || e.type === 'touchstart')) {
+        e.preventDefault();
+      }
       // now call the actuall handler
       return eventHandle.call(elem, e);
     }
