@@ -189,6 +189,14 @@ var mousetouch = mousetouch || {};
     var gesture = lastGesture;
     // update position
     if (touch) {
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        for (var n = 0; n < touches.length; n++) {
+          if (e.changedTouches[i].identifier == touches[n].identifier) {
+            touches[n]=e.changedTouches[i];
+            break;
+          }
+        }
+      }
       var touchavg = average_touches();
       gesture.x = touchavg.x;
       gesture.y = touchavg.y;
@@ -423,7 +431,7 @@ var mousetouch = mousetouch || {};
       }
       //ignore mouse event after touch event
       if (in_touch && e instanceof MouseEvent) {
-        if (config('debug')) console.log("mouse event "+e.type+" ignored.");
+        if (config('debug')) console.log("mouse event " + e.type + " ignored.");
         return;
       }
       // crossbrowser pageXY from jquery
