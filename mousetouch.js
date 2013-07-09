@@ -18,7 +18,7 @@ var mousetouch = mousetouch || {};
   var __mousetouch_defaults = {
     waitdoubleclick: false, // don't send out downs immidiately, wait whether it's going to be a double click
     cancelgestures: true, // if number of buttons/fingers changes, send out an extra cancel event for existing gesture
-    preventdefault: true, // always call preventDefault on all observed events
+    preventdefault: false, // always call preventDefault on all observed events
     preventdefault_move: true, // prevent default on move events
     debug: true,
     double_ms: 300, // double click: time in which first up must occure AND time in which 2dn down must occur after 1st up
@@ -485,7 +485,7 @@ var mousetouch = mousetouch || {};
     }
     // bind event
     if (elem.addEventListener) { // all modern browsers
-      elem.addEventListener(type, handler, false);
+      elem.addEventListener(type, handler, capture);
     } else if (elem.attachEvent) { // IE way of event attachment
       elem.attachEvent("on" + type, handler);
       if (capture) {
