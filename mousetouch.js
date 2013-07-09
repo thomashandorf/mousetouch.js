@@ -1,348 +1,566 @@
+"use strict";
 
-(function(mousetouch){
-   var debug=false;
-   var mt={}; // private variables of mousetouch
-   mt.current=-1;
-   mt.justpressed=false;
-   mt.justpnr=false; // just pressed and released
-   mt.dbl=false; // in double click gesture;
-   mt.outside=false; // outside of current element;
-   mt.elements=[];
-   mt.touches={}; // last coordinates of touches
-   mt.touchesidx=[];
-   mt.mouse={x:0,y:0}; // last coordinate of mouse
-   mt.gesturelast=undefined;
-   mt.button=0; // pressed button
-   // double click timings
-   mt.dbl_t1=300; // timing for release
-   mt.dbl_t2=500; // timing for next down
-   
-   //generalized event binding & handling without jquery or similar
-   
-   var bnd=function( elem, type, eventHandle){
-      var handler=function(event){
-         // crossbrowser pageXY from jquery
-         // Calculate pageX/Y if missing and clientX/Y available 
-         if ( event.pageX == null && event.clientX != null ) {
-            eventDoc = event.target.ownerDocument || document;
-            doc = eventDoc.documentElement;
-            body = eventDoc.body;
-            
-            event.pageX = event.clientX + ( doc && doc.scrollLeft || body && body.scrollLeft || 0 ) - ( doc && doc.clientLeft || body && body.clientLeft || 0 );
-            event.pageY = event.clientY + ( doc && doc.scrollTop  || body && body.scrollTop  || 0 ) - ( doc && doc.clientTop  || body && body.clientTop  || 0 );
-         }
-         
-         // Add which for click: 1 === left; 2 === middle; 3 === right
-         // Note: button is not normalized, so don't use it
-         if ( !event.which && event.button !== undefined ) {
-            event.which = ( event.button & 1 ? 1 : ( event.button & 2 ? 3 : ( event.button & 4 ? 2 : 0 ) ) );
-         }
-         
-         if (eventHandle.call(elem,event)===false){
-            if (event.button==2) event.preventDefault(); //REFACTOR this just patches the context menu on rotate
-            if (event.type=='touchmove') event.preventDefault(); //REFACTOR 
-            event.stopPropagation();
-         }
+var __mousetouch_defined = __mousetouch_defined || false;
+
+// public mousetouch object
+// variables can be changed to affect mousetouch behaviour
+
+var mousetouch = mousetouch || {};
+
+// anonymous function defining a private scope for internal mousetouch variables and functions
+(function(mousetouch) {
+  // only execute once. necessary????
+  if (__mousetouch_defined) return;
+  __mousetouch_defined = true;
+
+  if (mousetouch.debug) console.log('mousetouch init');
+
+  var __mousetouch_defaults = {
+    waitdoubleclick: false, // don't send out downs immidiately, wait whether it's going to be a double click
+    cancelgestures: true, // if number of buttons/fingers changes, send out an extra cancel event for existing gesture
+    debug: true,
+    double_ms: 300, // double click: time in which first up must occure AND time in which 2dn down must occur after 1st up
+    long_ms: 800 // time to be considered as long click
+  }
+
+  // some private variables
+  var gestureID = 1, // counts up for each new down event
+    elements = [],
+    lastGesture = undefined;
+  // variables for temporal gestures
+  var temp_ID = 1,
+    temp_crtlID = undefined, // for temporal gestures to detect if multiple clicks come from same finger / button
+    temp_justp = false, // just pressed
+    temp_justpnr = false, // just pressed and released
+    temp_downGesture = undefined,
+    temp_upGesture = undefined,
+    temp_element = undefined;
+  // Note: some temp variables are also gesture state variables as they are reset when the gesture ends
+  // mousetouch state variables
+  var current, mousePos, touch, touches, mouseBtn, crtlID, temp_long, temp_abort, gestures_detected, reset, transf_startd, transf_startrot;
+  var reset_state = function() {
+    current = undefined; // index of gesture recieving element into elements array
+    mousePos = {
+      x: 0,
+      y: 0
+    };
+    touch = false;
+    touches = [];
+    mouseBtn = [false, false, false];
+    crtlID = undefined; // ID of touch or mouse button
+    gestures_detected = {};
+    reset = false;
+    temp_long = false; // not yet pressed long enough for long click
+    temp_abort = false; // stop detecting temporal gestures for current gesture
+    transf_startd = undefined;
+    transf_startrot = undefined;
+  }
+  reset_state();
+
+  // register a gesture handler for a given element
+  mousetouch.register = function(element, handler, options) {
+    var elnr = elements.length;
+    elements[elnr] = {
+      handler: handler,
+      element: element,
+      options: (options ? options : {})
+    };
+    var down = function(e) { // handler for handling down events on the registered element
+      if (current !== undefined && elnr != current) {
+        console.log('mousetouch: multiple elements registered in bubble chain. will be implemented later.');
+        return;
       }
-      if ( elem.addEventListener ) {
-         elem.addEventListener( type, handler, false );
-      } else if ( elem.attachEvent ) {
-         elem.attachEvent( "on" + type, handler );
+      if (mousetouch.debug) console.log("down");
+      if (current === undefined) {
+        current = elnr; // indicates that a new gesture has started.
+        gestureID++;
       }
-   }
-   
-   // cheap domready handler
-   
-   var domready=function(handler){
-      var timer = setInterval( function (){
-         if ( document && document.getElementsByTagName && 
-            document.getElementById && document.body ) {
-            clearInterval( timer );
-            handler();
-         }
-      },1);
-   }
-   
-   // function for registering mousetouch events for an element, gestures is hash e.g. {doubleclick=>1,...}
-   mousetouch.register=function(element,handler,gestures){
-      var elnr=mt.elements.length;
-      mt.elements[elnr]={};
-      mt.elements[elnr].handler=handler;
-      mt.elements[elnr].element=element;
-      mt.elements[elnr].gestures=(gestures ? gestures : {});
-      
-      var down=function(e){
-         if (debug) console.log("down1");
-         if (e.pageX!=undefined){ 
-            mt.mouse.x=e.pageX; // save current mouse coordinate
-            mt.mouse.y=e.pageY;
-         }
-         mt.current=elnr;
-         mt.button=e.button; // FIXME this will only allow single button gestures; in general multibutton gesture will certainly need a document mousedown handler
-         mt.outside=false;
-         mt.dbl=mt.justpnr; // this is the second click of a double click if true
-         mt.justpressed=false;
-         mt.justpnr=false; 
-         mt.down_e=e;
-         if (mt.dbl){
-            if (debug) console.log("down2");
-            gesturehandler(e,'down');
-         } else {
-            if (debug) console.log("down3");
-            if (mt.elements[elnr].gestures.doubleclick){ // does this element want double clicks?
-               mt.justpressed=true;
-               var which=mt.current;
-               setTimeout(function(){
-                  if (debug) console.log("down_to_1");
-                  if (which==mt.current && mt.justpressed){
-                     if (debug) console.log("down_to_2");
-                     gesturehandler(e,'down'); // this is a delayed single click
-                     mt.justpressed=false;
-                  }
-               },mt.dbl_t1);
-            } else {
-               if (debug) console.log("down4");
-               gesturehandler(e,'down');
-            }
-         }
-         if (debug) console.log("down5");
-         
-         return false;
-      }
-      bnd(element,'mousedown',down); // register down function to mousedown
-      bnd(element,'touchstart',down); // and touchstart
-      
-      // events that simply register whether mouse / touch is outside element
-      bnd(element,'mouseleave',function(e){
-         if (elnr!=mt.current) return;
-         mt.outside=true;
-         return false;
-      });
-      bnd(element,'mouseenter',function(e){
-         if (elnr!=mt.current) return;
-         mt.outside=false;
-         return false;
-      });
-      bnd(element,"contextmenu",function(e){ // FIXME make this optional
-            return false; // disable context menu;
-      });
-      var wheel= function(e){
-         mt.current=elnr;
-         mt.outside=false;
-         mt.dbl=false; // this is the second click of a double click if true
-         mt.justpressed=false;
-         mt.justpnr=false; 
-         gesturehandler(e,'wheel');
-         mt.current=-1; // end gesture officially
-         return false;
-      } 
-      bnd(element,"mousewheel",wheel);
-      bnd(element,"DOMMouseScroll",wheel);
-   }
-   
-   // mouseup / touchend event; registered on global document to catch events outside of element
-   var up=function(e){
-      if (debug) console.log("up1");
-      if (mt.current<0) return; // not a gesture of any registered element
-      if (mt.justpressed){ // going to be a double click gesture (mouseup shortly after mousedown)
-         if (debug) console.log("up2");
-         mt.justpnr=true;
-         mt.justpressed=false;
-         var elnr=mt.current;
-         setTimeout(function(){
-            if (debug) console.log("up_to_1");
-            if (mt.justpnr){
-               if (mt.current>0 && mt.current != elnr) return; // we are in a different gesture already
-               mt.current=elnr;
-      if (debug) console.log("up_to_2");
-               gesturehandler(mt.down_e,'down'); // this is a delayed single click
-               gesturehandler(e,'up'); // instantaneously end gesture (single click)
-               mt.justpnr=false;
-               mt.current=-1;
-            }
-         },mt.dbl_t2);
+      if (touch) { // update touch information
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          touches.push(e.changedTouches[i]);
+        }
       } else {
-         if (debug) console.log("up3");
-         gesturehandler(e,'up');
+        if (e.button !== undefined) { // update button status
+          mouseBtn[e.button] = true;
+        }
       }
-      if (debug) console.log("up4");
-      mt.current=-1; // end gesture officially
+      // call the second part of the down handler;
+      // needed as "up" handler needs to call "down" handler if gesture is not finished and in this case the state updates from above should not be executed
+      gesture_down(e);
+    }
+    bnd(element, "mousedown", down, false);
+    bnd(element, "touchstart", down, false);
+  }
+  // 2nd part gesture handling for down events (needed since temporal gestures may trigger further execution at a later time point)
+  var gesture_down = function(e) {
+    if (mousetouch.debug) console.log("gesture_down");
+    var gesture = {
+      last: false,
+    };
+    // if there is a current gesture and there is a new down event we need to cancel the current gesture and continue
+    // with the new one 
+    // e.g. transition from single touch to double touch
+    if (lastGesture && config('cancelgestures')) { // send a cancel gesture
+      gesture_cancel();
+      gesture.first = true;
+    } else if (lastGesture) {
+      gesture.cancel = true; // don't send a extra cancel gesture; just set cancel property in current
+    } else {
+      gesture.first = true; // no current gesture, so this is a new one
+    }
+    // initializing properties of gesture
+    if (touch) {
+      var touchavg = average_touches();
+      gesture.x = touchavg.x;
+      gesture.y = touchavg.y;
+      gesture.start = {
+        x: gesture.x,
+        y: gesture.y
+      };
+      if (touches.length == 2) { // preparing 2-finger transform gestures
+        var dx = (touches[1].pageX - touches[0].pageX);
+        var dy = (touches[1].pageY - touches[0].pageY);
+        transf_startd = Math.sqrt(dx * dx + dy * dy); // initial distance of touches
+        transf_startrot = Math.atan2(dy, dx); // initial rotation
+      }
+    } else {
+      gesture.x = mousePos.x;
+      gesture.y = mousePos.y;
+      gesture.start = {
+        x: mousePos.x,
+        y: mousePos.y
+      };
+    }
+    // detect mnulti touch / or several mouse buttons
+    var num = 0;
+    if (mouseBtn[0]) num++;
+    if (mouseBtn[1]) num++;
+    if (mouseBtn[2]) num++;
+    num += touches.length;
+    if (num > 1) gestures_detected.multi = 1;
+    // fill in missing properties
+    gesture_fill(gesture, e)
+    // go
+    temp_gesture_down(gesture); // first does temporal gestures detection like double click or long click; may wait before sending gesture
+  }
+  // handler for up events
+  var gesture_up = function(e) {
+    if (current === undefined) return; // not in a gesture
+    if (mousetouch.debug) console.log("up");
+    gesture_fill(lastGesture, e);
+    if (touch) { // update touch information
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        for (var n = 0; n < touches.length; n++) {
+          if (e.changedTouches[i].identifier == touches[n].identifier) {
+            touches.splice(n, 1); // remove touch point
+          }
+        }
+      }
+    } else {
+      if (e.button !== undefined) { // update button status
+        mouseBtn[e.button] = false;
+      }
+    }
+    if (mouseBtn[0] || mouseBtn[1] || mouseBtn[2] || touches.length) { // WARNING: this only assumes 3 mouse buttons
+      // we are not finished yet. there will be a new gesture running afterwards, hence call gesture_down
+      gesture_down(e);
+    } else {
+      // finish gesture
+      lastGesture.last = true;
+      lastGesture.click = !gestures_detected.move && !gestures_detected.multi;
+      reset = true;
+      // send after reseting state to ensure reset even if client handler breaks;
+      temp_gesture_up(lastGesture); // this sends the gesture after handling possible temporal gestures; sending may be delayed
+    }
+  }
+  var gesture_move = function(e) {
+    if (current == undefined) return; // not in a gesture
+    if (mousetouch.debug) console.log("move");
+    temp_gesture_abort();
+    gestures_detected.move = true;
+    var gesture = lastGesture;
+    // update position
+    if (touch) {
+      var touchavg = average_touches();
+      gesture.x = touchavg.x;
+      gesture.y = touchavg.y;
+    } else {
+      gesture.x = mousePos.x;
+      gesture.y = mousePos.y;
+    }
+    // detect transform gestures
+    // if (touch){
+    //   gesture_touch_scale(gesture);
+    //   gesture_touch_rotate(gesture);
+    // } else {
+    //   gesture_mouse_scale(gesture);
+    //   gesture_mouse_rotate(gesture);
+    //   gesture_mouse_scroll(gesture);
+    // }
+
+    // feed in more gesture data
+    gesture_fill(gesture, e);
+    //go
+
+    gesture_send(gesture);
+  }
+  var gesture_cancel = function() {
+    temp_gesture_abort();
+    lastGesture.cancel = true;
+    lastGesture.last = true;
+    gesture_send(lastGesture);
+  }
+  var gesture_fill = function(gesture, e) {
+    // inject further properties calculated from current gesture state
+    add_properties(gesture, {
+      event: e,
+      shift: {
+        x: gesture.start.x - gesture.x,
+        y: gesture.start.y - gesture.y
+      },
+      double: gestures_detected.hasOwnProperty('double'),
+      long: gestures_detected.hasOwnProperty('long'),
+      multi: gestures_detected.hasOwnProperty('multi'),
+      transform: gestures_detected.hasOwnProperty('transform'),
+      move: gestures_detected.hasOwnProperty('move')
+    }, true);
+    // inject default values if not yet set
+    add_properties(gesture, {
+      rotation: 0,
+      scale: 1,
+      click: false,
+      cancel: false
+    });
+  }
+  var gesture_send = function(gesture, element) {
+    var el = element || elements[current];
+    // save current gesture
+    if (!element) gesture_save(gesture); // this may destroy gesture state variables if reset is true
+    // call client handler, should be called as the last step to avoid state corruption if client handler fails
+    if (mousetouch.debug) console.log("gesture_send");
+    el.handler.call(el.element, gesture);
+  }
+  // save gesture to lastGesture and reset some properties which are valid only one time
+  var gesture_save = function(gesture) {
+    if (reset) {
+      if (mousetouch.debug) console.log("gesture_reset");
+      lastGesture = undefined;
+      reset_state();
+    } else {
+      if (mousetouch.debug) console.log("gesture_save");
+      lastGesture = dclone(gesture); // deep copy gesture object; client changes won't matter anymore
+      lastGesture.cancel = false;
+      lastGesture.first = false;
+      lastGesture.last = false;
+    }
+  }
+  // detects double and long clicks (down handler)
+  var temp_gesture_down = function(gesture) {
+    if (temp_abort) return gesture_send(gesture);
+    if (mousetouch.debug) console.log("temp_down");
+    // detect if multiple clicks come from same button/finger
+    // if (temp_crtlID && temp_crtlID !== crtlID) { // WARNING: this probably does not work for touches
+    //   temp_gesture_abort();
+    //   return gesture_send(gesture);
+    // }
+    // temp_crtlID = crtlID;
+
+    if (temp_justpnr) { // this is a double click
+      temp_justpnr = false;
+      temp_abort = true; // set temp abort, but do not trigger gesture_send for latest down and up events (only applies if waitdoubleclick is true)
+      temp_downGesture = undefined;
+      temp_upGesture = undefined;
+      gestures_detected.double = true;
+      gesture.double = true; //inject into current down gesture as well (this already has been filled with gesture_fill)
+      return gesture_send(gesture);
+    } else {
+      if (temp_downGesture) {
+        temp_gesture_abort(); // this inactivates any running timers from last temp gesture by doing temp_ID++
+        return gesture_send(gesture);
+      } else if (!(temp_abort)) { // start new temporal gesture detection
+        var curID = temp_ID;
+        var curGID = gestureID;
+        temp_downGesture = gesture;
+        temp_element = elements[current];
+        temp_justp = true;
+        temp_long = true;
+        setTimeout(function() { // start timer for doubleclick detection
+          if (curID != temp_ID) return; // not my temp gesture anymore
+          if (temp_justp) { // no up fired in waiting period and temporal gestures have not been aborted
+            if (mousetouch.debug) console.log("mousetouch justp timeout");
+            temp_gesture_abort(true);
+          }
+          temp_justp = false;
+        }, config('double_ms'));
+        setTimeout(function() { // start timer for long click detection
+          if (curGID != gestureID) return; // not my gesture anymore
+          if (temp_long) { // warning, long click detection does not react on temp_abort; temp_long is falsified extra in temp_gesture_abort if not call with parameter true
+            if (mousetouch.debug) console.log("mousetouch long click timeout");
+            gestures_detected.long = true;
+          }
+          temp_long = false;
+        }, config('long_ms'));
+        if (config('waitdoubleclick')) {
+          return gesture_save(gesture);
+        } else {
+          return gesture_send(gesture);
+        }
+      }
+    }
+  }
+  // detects double and long clicks (up handler)
+  var temp_gesture_up = function(gesture) {
+    temp_long = false; // if long click waiting period is not finished yet, don't wait for it anymore
+    if (temp_abort) return gesture_send(gesture);
+    if (mousetouch.debug) console.log("temp_up"); // detect if multiple clicks come from same button/finger
+    // if (temp_crtlID && temp_crtlID !== crtlID) {
+    //   temp_gesture_abort();
+    //   return gesture_send(gesture);
+    // }
+    // temp_crtlID = crtlID;
+
+    if (temp_justp) { // release after click -> maybe a double click
+      var curID = temp_ID;
+      temp_upGesture = gesture;
+      temp_justp = false;
+      temp_justpnr = true;
+      setTimeout(function() {
+        if (curID != temp_ID) return; // not my temp gesture anymore
+        if (temp_justpnr) { // waiting for next down period expired
+          if (mousetouch.debug) console.log("mousetouch justpnr timeout");
+          temp_gesture_abort();
+        }
+        temp_justpnr = false;
+      }, config('double_ms'));
+      if (config('waitdoubleclick')) {
+        return gesture_save(gesture);
+      } else {
+        return gesture_send(gesture);
+      }
+    }
+    return gesture_send(gesture);
+  }
+  // abort temporal gesture detection and trigger pending events if 'waitdoubleclick'
+  // if dontabortlong is true, this does not stop long click detection (needed for temp_gesture_abort called from double click down timeout handler)
+  var temp_gesture_abort = function(dontabortlong) {
+    if (!dontabortlong) temp_long = false;
+    if (temp_abort) return;
+    if (mousetouch.debug) console.log("temp_abort");
+    if (current !== undefined) temp_abort = true; // only set temp_abort if currently in gesture
+    temp_ID++;
+    temp_justp = false;
+    temp_justpnr = false;
+    if (config('waitdoubleclick')) {
+      if (temp_downGesture) gesture_send(temp_downGesture, temp_element);
+      if (temp_upGesture) gesture_send(temp_upGesture, temp_element);
+    }
+    temp_downGesture = undefined;
+    temp_upGesture = undefined;
+  }
+  // get the average of all active touch positions.
+  var average_touches = function() {
+    var x = 0,
+      y = 0,
+      cc = 0;
+    for (var i = 0; i < touches.length; i++) {
+      var t = touches[i];
+      if (t.pageX) {
+        x += t.pageX;
+        y += t.pageY;
+        cc++;
+      }
+    }
+    x /= cc;
+    y /= cc;
+    return {
+      x: x,
+      y: y
+    };
+  };
+
+  // Internet Explorer version detection, http://gist.github.com/527683
+  var IE_ver = (function() {
+
+    var v = 3,
+      div = document.createElement('div'),
+      all = div.getElementsByTagName('i');
+
+    while (
+      div.innerHTML = '<!--[if gt IE ' + (++v) + ']><i></i><![endif]-->',
+      all[0]);
+
+    return v > 4 ? v : undefined;
+
+  }());
+
+  // generalized event binding & handling without jquery or similar
+  var bnd = function(elem, type, eventHandle, capture) {
+    var handler = function(e) {
+      // touch detection
+      touch = (e.changedTouches ? true : false);
+      // crossbrowser pageXY from jquery
+      // Calculate pageX/Y if missing and clientX/Y available 
+      if (!touch && e.pageX === undefined && e.clientX !== undefined) {
+        eventDoc = e.target.ownerDocument || document;
+        doc = eventDoc.documentElement;
+        body = eventDoc.body;
+        e.pageX = e.clientX + (doc && doc.scrollLeft || body && body.scrollLeft || 0) - (doc && doc.clientLeft || body && body.clientLeft || 0);
+        e.pageY = e.clientY + (doc && doc.scrollTop || body && body.scrollTop || 0) - (doc && doc.clientTop || body && body.clientTop || 0);
+      }
+      // update mouse position
+      if (!touch && e.pageX !== undefined) {
+        mousePos.x = e.pageX;
+        mousePos.y = e.pageY;
+      }
+      // normalize mouse buttons to 0 === left; 1 === middle; 2 === right
+      // http://unixpapa.com/js/mouse.html
+      if (!touch && e.button !== undefined) {
+        if (IE_ver < 9) {
+          switch (e.button) {
+            case 1:
+              e.button = 0;
+              break;
+            case 2:
+              e.button = 2;
+              break
+            case 4:
+              e.button = 1;
+          }
+        }
+      } else if (!touch && e.which !== undefined) { // quick hack which is not correct in all cases, but for almost all browsers e.button should be set anyway
+        e.button = e.which - 1;
+      }
+
+      // unified identifier for mouse button and fingers
+      if (!touch && e.button !== undefined) {
+        crtlID = "btn" + e.button;
+      }
+      if (touch) {
+        crtlID = e.changedTouches[0].identifier;
+      }
+
+      console.log("event: " + e.type + ", crtlID: " + crtlID);
+      // now call the actuall handler
+      return eventHandle.call(elem, e);
+    }
+    // bind event
+    if (elem.addEventListener) { // all modern browsers
+      elem.addEventListener(type, handler, false);
+    } else if (elem.attachEvent) { // IE way of event attachment
+      elem.attachEvent("on" + type, handler);
+      if (capture) {
+        elem.setCapture(true);
+      }
+    }
+  }
+
+  // access mousetouch configuration properties either trough options hash provided at register or through mousetouch global object
+  var config = function(pt) {
+    if (current !== undefined && elements[current].options[pt] !== undefined) return elements[current].options[pt];
+    if (mousetouch[pt] !== undefined) return mousetouch[pt];
+    return undefined;
+  }
+  // tests if obj is plain object
+  var isPlainObject = function(obj) {
+    // Must be an Object.
+    // Because of IE, we also have to check the presence of the constructor property.
+    // Make sure that DOM nodes and window objects don't pass through, as well
+    if (!obj || typeof(obj) !== "object" || obj.nodeType) {
       return false;
-   }
-   
-   // mousemove / touchmove event; registered on global document to catch events outside of element
-   var move=function(e){
-      if (debug) console.log("move1");
-      if (e.pageX!=undefined){ 
-         mt.mouse.x=e.pageX; // save current mouse coordinate
-         mt.mouse.y=e.pageY;
+    }
+    try {
+      // Not own constructor property must be Object
+      if (obj.constructor && !obj.hasOwnProperty("constructor") && !obj.constructor.prototype.hasOwnProperty("isPrototypeOf")) {
+        return false;
       }
-      if (mt.current<0) return; // not a gesture of any registered element
-      if (mt.justpressed || mt.justpnr){ // this interrupts double click detection 
-         mt.justpnr=false;
-         mt.justpressed=false;
-         if (debug) console.log("move2");
-         gesturehandler(e,'down'); // start of gesture
-      }
-      if (debug) console.log("move3");
-      gesturehandler(e,'move');
+    } catch (e) {
+      // IE8,9 Will throw exceptions on certain host objects #9897
       return false;
-   }
-   
-   
-   
-   // call the handler for the element; provide additional gesture information
-   var gesturehandler=function(e,what){ 
-      if (debug) console.log("hdl1");
-      if (mt.gesturelast && (what=='up' || what=='down' || what=='wheel')){ // break last gesture
-         console.log("break gesture "+ what);
-         var gesture=mt.gesturelast;
-         gesture.first=false;
-         gesture.last=true;
-         mt.elements[mt.current].handler.call(mt.elements[mt.current].element,e,gesture);
-         mt.gesturelast=undefined;
+    }
+    // Own properties are enumerated firstly, so to speed up,
+    // if last one is own, then all properties are own.
+    var key;
+    for (key in obj) {}
+    return key === undefined || obj.hasOwnProperty(key);
+  }
+  // deep clone objects; modified from jquery extend; 
+  var dclone = function() {
+    var length = arguments.length,
+      target = length == 1 ? {} : arguments[0],
+      srcobj = length == 1 ? arguments[0] : arguments[1];
+
+    if (!srcobj) return;
+    // Extend the base object
+    for (name in srcobj) {
+      var src, copyIsArray, copy, name, clone;
+      src = target[name];
+      copy = srcobj[name];
+      // Recurse if we're merging plain objects or arrays
+      if (copy && (isPlainObject(copy) || (copyIsArray = (typeof(copy) === "array")))) {
+        if (copyIsArray) {
+          copyIsArray = false;
+          clone = src && (typeof(src) === "array") ? src : [];
+
+        } else {
+
+          clone = src && (isPlainObject(src)) ? src : {};
+        }
+
+        // Never move original objects, clone them
+        target[name] = dclone(clone, copy);
+
+        // Don't bring in undefined values
+      } else if (copy !== undefined) {
+        target[name] = copy;
       }
-      var gesture={doubleclick:mt.dbl,outside:mt.outside};
-      if (debug) console.log("hdl2");
-      if (e.changedTouches) { // touch event
-		 if (debug) console.log(e);
-         if (!doTouches(e,what,gesture)) return; // no more gesture if all touches have finished; last up gesture has been handled already above
-       if (debug) console.log(JSON.stringify(gesture));
-         if (debug) console.log("hdl3");
-      } else { // mouse event
-         if (debug) console.log("hdl7");
-         if (what=='up') return;
-         doMouse(e,what,gesture);
+    }
+
+    // Return the modified object
+    return target;
+  };
+
+  // fill in properties from src into target; if force==true replace properties already set in target
+  var add_properties = function(target, src, force) {
+    for (var p in src) {
+      if ((force || !target[p]) && src.hasOwnProperty(p)) {
+        target[p] = src[p];
       }
-      if (debug) console.log("hdl8");
-      if (debug) console.log("mt.current=" + mt.current);
-      console.log(gesture);
-      mt.elements[mt.current].handler.call(mt.elements[mt.current].element,e,gesture);
-      mt.gesturelast=gesture;
-      if (debug) console.log("hdl9");
-      
-   }
-   
-   // Mouse specific event handling
-   var doMouse=function(e,what,gesture){
-      gesture.x=e.pageX;
-      gesture.y=e.pageY;
-      if (gesture.x === undefined){ // happens e.g. for mousewheel
-         gesture.x=mt.mouse.x;
-         gesture.y=mt.mouse.y;
-      }
-      var el=mt.elements[mt.current].element;
-      var cx=$(el).offset().left+$(el).width()/2;
-      var cy=$(el).offset().top+$(el).height()/2;
-      if (what=='down') {
-         gesture.first=true;
-         mt.start={x:gesture.x,y:gesture.y};
-         mt.startrot=Math.atan2(gesture.y-cy,gesture.x-cx);
-      }
-      if (what=='wheel'){
-         var delta;
-         if (e.wheelDelta) { /* IE/Opera. */
-            delta = e.wheelDelta/120;
-         } else if (e.detail) { /** Mozilla case. */
-            /** In Mozilla, sign of delta is different than in IE.
-             * Also, delta is multiple of 3.
-             */
-            delta = -e.detail/3;
-         }
-         gesture.scale=1;
-         gesture.start={x:gesture.x,y:gesture.y};
-         gesture.shift={x:0,y:delta*20};
-         // gesture.scale=Math.pow(1.2,delta);
-         // gesture.start={x:gesture.x,y:gesture.y};
-         // gesture.shift={x:0,y:0};
-         gesture.rotation=0;
-         gesture.istransform=true;
-      } else if (mt.button==2){ // rotate gesture on mouse
-         var rot=Math.atan2(gesture.y-cy,gesture.x-cx);
-         var drot=rot-mt.startrot;
-         if (drot>Math.PI) drot-=2*Math.PI;
-         if (drot<-Math.PI) drot+=2*Math.PI;
-         gesture.rotation=180*drot/Math.PI;
-         gesture.start={x:cx,y:cy};
-         gesture.shift={x:0,y:0};
-         gesture.scale=1;
-         gesture.istransform=true;
-      } else if (mt.button==1){ // scale gesture on mouse
-         var dist=(cx-gesture.x-cy+gesture.y)/100;
-         gesture.scale=(dist!=0 ? Math.pow(2,dist) : 1);
-         gesture.rotation=0;
-         gesture.start={x:cx,y:cy};
-         gesture.shift={x:0,y:0};
-         gesture.istransform=true;
-      } else {
-         gesture.scale=1;
-         gesture.start={x:mt.start.x,y:mt.start.y};
-         gesture.rotation=0;
-         gesture.shift={x:gesture.x-mt.start.x,y:gesture.y-mt.start.y};
-      }
-   }
-   // touch specific event handling
-   var doTouches=function(oe,what,gesture){
-      var i;
-      if (debug) console.log(JSON.stringify(mt.touches));
-      mt.touches={};
-      mt.touchesidx=[];
-      var x=0;
-      var y=0;
-      for (i=0;i<oe.touches.length;i++){
-         var t=oe.touches[i];
-         mt.touches[t.identifier]={pageX:t.pageX,pageY:t.pageY,identifier:t.identifier};
-         mt.touchesidx.push(t.identifier);
-         x+=t.pageX;
-         y+=t.pageY;
-      }
-      if (mt.touchesidx.length==0) return false; // no gesture continues
-      mt.touchesidx.sort();
-      x/=mt.touchesidx.length;
-      y/=mt.touchesidx.length;
-      // FIXME: what if len==0;
-      gesture.x=x;
-      gesture.y=y;
-      if (debug) console.log(JSON.stringify(mt.touches));
-      if (what=='down' || what=='up'){ // gesture starts
-         gesture.first=true;
-         mt.start={x:gesture.x,y:gesture.y};
-         gesture.start={x:gesture.x,y:gesture.y};
-         gesture.shift={x:0,y:0};
-         if (mt.touchesidx.length==2){
-            var d={x:mt.touches[mt.touchesidx[1]].pageX-mt.touches[mt.touchesidx[0]].pageX,y:mt.touches[mt.touchesidx[1]].pageY-mt.touches[mt.touchesidx[0]].pageY};
-            mt.startrot=Math.atan2(d.y,d.x);
-            mt.startd=Math.sqrt(d.x*d.x+d.y*d.y);
-            gesture.istransform=true;
-         }
-         gesture.scale=1;
-         gesture.rotation=0;
-      } else {
-         gesture.start={x:mt.start.x,y:mt.start.y};
-         gesture.shift={x:gesture.x-mt.start.x,y:gesture.y-mt.start.y};
-         if (mt.touchesidx.length==2){ // rotation & scale for two finger gestures
-            var d={x:mt.touches[mt.touchesidx[1]].pageX-mt.touches[mt.touchesidx[0]].pageX,y:mt.touches[mt.touchesidx[1]].pageY-mt.touches[mt.touchesidx[0]].pageY};
-            var rot=Math.atan2(d.y,d.x);
-            var drot=rot-mt.startrot;
-            if (drot>Math.PI) drot-=2*Math.PI;
-            if (drot<-Math.PI) drot+=2*Math.PI;
-            gesture.rotation=180*drot/Math.PI;
-            var ld=Math.sqrt(d.x*d.x+d.y*d.y);
-            gesture.scale=ld/mt.startd;
-            gesture.istransform=true;
-         } else {
-            gesture.scale=1;
-            gesture.rotation=0;
-         }
-      }
-      return true;
-   }
-   // register document event handlers after DOM ready
-   domready(function(){
-      bnd(document,'mouseup',up);
-      bnd(document,'touchend',up);
-      bnd(document,'mousemove',move);
-      bnd(document,'touchmove',move);
-      bnd(document,'touchcancel',up);
-   });
-})(window.mousetouch={});
+    }
+  }
+
+  // ready function; called once document is available
+  var ready = function() {
+    // registering move and up handlers at document level and in capture phase
+    bnd(document, 'mouseup', gesture_up, true);
+    bnd(document, 'touchend', gesture_up, true);
+    bnd(document, 'mousemove', gesture_move, true);
+    bnd(document, 'touchmove', gesture_move, true);
+    bnd(document, 'touchcancel', gesture_up, true);
+    // fill in default parameters if not already defined
+    add_properties(mousetouch, __mousetouch_defaults);
+  }
+  // bind global listeners
+  ready();
+  // // bind ready function cross-browser
+  // // http://stackoverflow.com/questions/799981/document-ready-equivalent-without-jquery
+  // // Mozilla, Opera and webkit nightlies currently support this event
+  // if (document.addEventListener) {
+  //   // Use the handy event callback
+  //   document.addEventListener("DOMContentLoaded", function() {
+  //     document.removeEventListener("DOMContentLoaded", arguments.callee, false);
+  //     ready();
+  //   }, false);
+
+  //   // If IE event model is used
+  // } else if (document.attachEvent) {
+  //   // ensure firing before onload,
+  //   // maybe late but safe also for iframes
+  //   document.attachEvent("onreadystatechange", function() {
+  //     if (document.readyState === "complete") {
+  //       document.detachEvent("onreadystatechange", arguments.callee);
+  //       ready();
+  //     }
+  //   });
+  // }
+
+})(mousetouch);

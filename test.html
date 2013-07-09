@@ -1,8 +1,9 @@
 <html>
 	<head>
+	  <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1"/>
       <!--<script src="http://192.168.2.167:8080/target/target-script-min.js#anonymous"></script>-->
-		<script type="text/javascript" src="jquery-1.7.2.js"></script>
-		<script type="text/javascript" src="mousetouch.js"></script>
+        <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+		<script type="text/javascript" src="mousetouch2.js"></script>
 		<script type="text/javascript">
 		$(function() {
          $('#button1').click(function(){
@@ -11,20 +12,22 @@
             mousetouch.register($('#div2')[0],handler,{});
          });
 		});
-		function handler(e,gesture){
-			this.innerHTML=(gesture.first ? 'started<BR>' : '') +
-							(gesture.last ? 'finshed<BR>' : '') +
-							'pos: '+gesture.x + ","+gesture.y + 
-							(gesture.outside ? ' (outside)' : '') +
-							'<BR>' +
-							(gesture.doubleclick ? ' double-click<BR>' : '') +
-                     (gesture.start ? ' start: ' + gesture.start.x + ',' + gesture.start.y + '<BR>' : '') +
-							(gesture.shift ? ' shift: ' + gesture.shift.x + ',' + gesture.shift.y + '<BR>' : '') +
-							(gesture.scale ? ' scale: ' + gesture.scale + '<BR>' : '') +
-							(gesture.rotation ? ' rotation: ' + gesture.rotation + '<BR>' : '');
+		function handler(gesture){
+			// this.innerHTML=(gesture.first ? 'started<BR>' : '') +
+			// 				(gesture.last ? 'finshed<BR>' : '') +
+			// 				'pos: '+gesture.x + ","+gesture.y + 
+			// 				(gesture.outside ? ' (outside)' : '') +
+			// 				'<BR>' +
+			// 				(gesture.doubleclick ? ' double-click<BR>' : '') +
+   //                   (gesture.start ? ' start: ' + gesture.start.x + ',' + gesture.start.y + '<BR>' : '') +
+			// 				(gesture.shift ? ' shift: ' + gesture.shift.x + ',' + gesture.shift.y + '<BR>' : '') +
+			// 				(gesture.scale ? ' scale: ' + gesture.scale + '<BR>' : '') +
+			// 				(gesture.rotation ? ' rotation: ' + gesture.rotation + '<BR>' : '');
 							
 			console.log(gesture);
-			console.log(e.pageX + ":" + e.pageY);
+			console.log(gesture.event);
+			delete gesture.event;
+			this.innerHTML="<pre>" + JSON.stringify(gesture,null," ") + "</pre>";
 		}
 		</script>
 	</head>
