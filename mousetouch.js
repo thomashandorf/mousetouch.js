@@ -20,7 +20,8 @@ var mousetouch = mousetouch || {};
     cancelgestures: true, // if number of buttons/fingers changes, send out an extra cancel event for existing gesture
     debug: true,
     double_ms: 300, // double click: time in which first up must occure AND time in which 2dn down must occur after 1st up
-    long_ms: 800 // time to be considered as long click
+    long_ms: 500, // time to be considered as long click
+    touchquarantine_ms: 400 // how long to wait after touch event until a mouse event is not ignored anymore
   }
 
   // some private variables
@@ -36,6 +37,11 @@ var mousetouch = mousetouch || {};
     temp_upGesture = undefined,
     temp_element = undefined;
   // Note: some temp variables are also gesture state variables as they are reset when the gesture ends
+
+  // variables for mouse events after touch events detection
+  var touchID = 1,
+    in_touch = false;
+
   // mousetouch state variables
   var current, mousePos, touch, touches, mouseBtn, crtlID, temp_long, temp_abort, gestures_detected, reset, transf_startd, transf_startrot;
   var reset_state = function() {
@@ -398,6 +404,21 @@ var mousetouch = mousetouch || {};
     var handler = function(e) {
       // touch detection
       touch = (e.changedTouches ? true : false);
+      // start mouse events after touch events detection
+      if (touch) {
+        touchID++;
+        var this_touchID = touchID;
+        in_touch = true;
+        setTimeout(function() {
+          if (this_touchID === touchID) {
+            in_touch = false;
+          }
+        }, config('touchquarantine_ms'))
+      }
+      //ignore mouse event after touch event
+      if (in_touch && e instanceof MouseEvent){
+        return;
+      }
       // crossbrowser pageXY from jquery
       // Calculate pageX/Y if missing and clientX/Y available 
       if (!touch && e.pageX === undefined && e.clientX !== undefined) {
@@ -440,6 +461,7 @@ var mousetouch = mousetouch || {};
       }
 
       console.log("event: " + e.type + ", crtlID: " + crtlID);
+
       // now call the actuall handler
       return eventHandle.call(elem, e);
     }
