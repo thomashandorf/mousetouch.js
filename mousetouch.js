@@ -22,7 +22,7 @@ var mousetouch = mousetouch || {};
     debug: true,
     double_ms: 300, // double click: time in which first up must occure AND time in which 2dn down must occur after 1st up
     long_ms: 500, // time to be considered as long click
-    touchquarantine_ms: 400 // how long to wait after touch event until a mouse event is not ignored anymore
+    touchquarantine_ms: 1000 // how long to wait after touch event until a mouse event is not ignored anymore
   }
 
   // some private variables
