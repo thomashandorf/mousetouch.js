@@ -19,6 +19,7 @@ var mousetouch = mousetouch || {};
     cancelgestures: true, // if number of buttons/fingers changes, send out an extra cancel event for existing gesture
     preventdefault: false, // always call preventDefault on all observed events
     preventdefault_move: true, // prevent default on move events
+    preventdefault_context: true, // prevent context menu
     debug: true,
     double_ms: 300, // double click: time in which first up must occure AND time in which 2dn down must occur after 1st up
     long_ms: 500, // time to be considered as long click
@@ -97,6 +98,11 @@ var mousetouch = mousetouch || {};
     }
     bnd(element, "mousedown", down, false);
     bnd(element, "touchstart", down, false);
+    if (config('preventdefault_context')) {
+      bnd(element, "contextmenu", function(e) {
+        e.preventDefault()
+      }, false);
+    }
   }
   // 2nd part gesture handling for down events (needed since temporal gestures may trigger further execution at a later time point)
   var gesture_down = function(e) {
