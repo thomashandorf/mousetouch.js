@@ -1,5 +1,3 @@
-"use strict";
-
 var __mousetouch_defined = __mousetouch_defined || false;
 
 // public mousetouch object
@@ -9,6 +7,7 @@ var mousetouch = mousetouch || {};
 
 // anonymous function defining a private scope for internal mousetouch variables and functions
 (function(mousetouch) {
+  "use strict";
   // only execute once. necessary????
   if (__mousetouch_defined) return;
   __mousetouch_defined = true;
@@ -192,7 +191,7 @@ var mousetouch = mousetouch || {};
       for (var i = 0; i < e.changedTouches.length; i++) {
         for (var n = 0; n < touches.length; n++) {
           if (e.changedTouches[i].identifier == touches[n].identifier) {
-            touches[n]=e.changedTouches[i];
+            touches[n] = e.changedTouches[i];
             break;
           }
         }
