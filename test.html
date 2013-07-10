@@ -13,21 +13,21 @@
          });
 		});
 		function handler(gesture){
-			// this.innerHTML=(gesture.first ? 'started<BR>' : '') +
-			// 				(gesture.last ? 'finshed<BR>' : '') +
-			// 				'pos: '+gesture.x + ","+gesture.y + 
-			// 				(gesture.outside ? ' (outside)' : '') +
-			// 				'<BR>' +
-			// 				(gesture.doubleclick ? ' double-click<BR>' : '') +
-   //                   (gesture.start ? ' start: ' + gesture.start.x + ',' + gesture.start.y + '<BR>' : '') +
-			// 				(gesture.shift ? ' shift: ' + gesture.shift.x + ',' + gesture.shift.y + '<BR>' : '') +
-			// 				(gesture.scale ? ' scale: ' + gesture.scale + '<BR>' : '') +
-			// 				(gesture.rotation ? ' rotation: ' + gesture.rotation + '<BR>' : '');
+			this.innerHTML=(gesture.first ? 'started<BR>' : '') +
+							(gesture.last ? 'finshed<BR>' : '') +
+							'pos: '+gesture.x + ","+gesture.y + 
+							(gesture.outside ? ' (outside)' : '') +
+							'<BR>' +
+							(gesture.doubleclick ? ' double-click<BR>' : '') +
+                     (gesture.start ? ' start: ' + gesture.start.x + ',' + gesture.start.y + '<BR>' : '') +
+							(gesture.shift ? ' shift: ' + gesture.shift.x + ',' + gesture.shift.y + '<BR>' : '') +
+							(gesture.scale ? ' scale: ' + gesture.scale + '<BR>' : '') +
+							(gesture.rotation ? ' rotation: ' + gesture.rotation + '<BR>' : '');
 							
 			console.log(gesture);
 			console.log(gesture.event);
-			delete gesture.event;
-			this.innerHTML="<pre>" + JSON.stringify(gesture,null," ") + "</pre>";
+			// WARNING: JSON.stringify of gesture seems to kill touch event handling, where touchmove is only send during first touch gesture, then only for touches starting outside the registered element
+			//this.innerHTML="<pre>" + JSON.stringify(gesture,null," ") + "</pre>";
 		}
 		</script>
 	</head>
