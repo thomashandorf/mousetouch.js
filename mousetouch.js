@@ -130,12 +130,8 @@ var mousetouch = mousetouch || {};
         x: gesture.x,
         y: gesture.y
       };
-      if (touches.length == 2) { // preparing 2-finger transform gestures
-        var dx = (touches[1].pageX - touches[0].pageX);
-        var dy = (touches[1].pageY - touches[0].pageY);
-        transf_startd = Math.sqrt(dx * dx + dy * dy); // initial distance of touches
-        transf_startrot = Math.atan2(dy, dx); // initial rotation
-      }
+      gesture_touch_scale_start();
+      gesture_touch_rotate_start();
     } else {
       gesture.x = mousePos.x;
       gesture.y = mousePos.y;
@@ -210,14 +206,14 @@ var mousetouch = mousetouch || {};
       gesture.y = mousePos.y;
     }
     // detect transform gestures
-    // if (touch){
-    //   gesture_touch_scale(gesture);
-    //   gesture_touch_rotate(gesture);
-    // } else {
-    //   gesture_mouse_scale(gesture);
-    //   gesture_mouse_rotate(gesture);
-    //   gesture_mouse_scroll(gesture);
-    // }
+    if (touch){
+      gesture_touch_scale(gesture);
+      gesture_touch_rotate(gesture);
+    } else {
+      // gesture_mouse_scale(gesture);
+      // gesture_mouse_rotate(gesture);
+      // gesture_mouse_scroll(gesture);
+    }
 
     // feed in more gesture data
     gesture_fill(gesture, e);
@@ -404,6 +400,45 @@ var mousetouch = mousetouch || {};
       y: y
     };
   };
+  // prepare start value for scale gesture
+  var gesture_touch_scale_start = function() {
+    if (touches.length == 2) { // preparing 2-finger transform gestures
+      var dx = (touches[1].pageX - touches[0].pageX);
+      var dy = (touches[1].pageY - touches[0].pageY);
+      transf_startd = Math.sqrt(dx * dx + dy * dy); // initial distance of touches
+      gestures_detected.transform = true;
+    }
+  }
+  // prepare start value for rotate gesture
+  var gesture_touch_rotate_start = function() {
+    if (touches.length == 2) { // preparing 2-finger transform gestures
+      var dx = (touches[1].pageX - touches[0].pageX);
+      var dy = (touches[1].pageY - touches[0].pageY);
+      transf_startrot = Math.atan2(dy, dx); // initial rotation
+      gestures_detected.transform = true;
+    }
+  }
+  var gesture_touch_scale = function(gesture) {
+    if (touches.length == 2) { // preparing 2-finger transform gestures
+      var dx = (touches[1].pageX - touches[0].pageX);
+      var dy = (touches[1].pageY - touches[0].pageY);
+      var now = Math.sqrt(dx * dx + dy * dy); // distance of touches
+      gesture.scale = now / transf_startd
+      gestures_detected.transform = true;
+    }
+  }
+  var gesture_touch_rotate = function(gesture) {
+    if (touches.length == 2) { // preparing 2-finger transform gestures
+      var dx = (touches[1].pageX - touches[0].pageX);
+      var dy = (touches[1].pageY - touches[0].pageY);
+      var now = Math.atan2(dy, dx); // initial rotation
+      var drot = now - transf_startrot;
+      if (drot > Math.PI) drot -= 2 * Math.PI;
+      if (drot < -Math.PI) drot += 2 * Math.PI;
+      gesture.rotation = 180 * drot / Math.PI
+      gestures_detected.transform = true;
+    }
+  }
 
   // Internet Explorer version detection, http://gist.github.com/527683
   var IE_ver = (function() {
