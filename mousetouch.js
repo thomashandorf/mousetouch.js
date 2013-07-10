@@ -32,7 +32,7 @@ var mousetouch = mousetouch || {};
     lastGesture = undefined;
   // variables for temporal gestures
   var temp_ID = 1,
-    temp_crtlID = undefined, // for temporal gestures to detect if multiple clicks come from same finger / button
+    temp_ctrlID = undefined, // for temporal gestures to detect if multiple clicks come from same finger / button
     temp_justp = false, // just pressed
     temp_justpnr = false, // just pressed and released
     temp_downGesture = undefined,
@@ -45,7 +45,7 @@ var mousetouch = mousetouch || {};
     in_touch = false;
 
   // mousetouch state variables
-  var current, mousePos, touch, touches, mouseBtn, crtlID, temp_long, temp_abort, gestures_detected, reset, transf_startd, transf_startrot;
+  var current, mousePos, touch, touches, mouseBtn, ctrlID, temp_long, temp_abort, gestures_detected, reset, transf_startd, transf_startrot;
   var reset_state = function() {
     current = undefined; // index of gesture recieving element into elements array
     mousePos = {
@@ -55,7 +55,7 @@ var mousetouch = mousetouch || {};
     touch = false;
     touches = [];
     mouseBtn = [false, false, false];
-    crtlID = undefined; // ID of touch or mouse button
+    ctrlID = undefined; // ID of touch or mouse button
     gestures_detected = {};
     reset = false;
     temp_long = false; // not yet pressed long enough for long click
@@ -85,6 +85,12 @@ var mousetouch = mousetouch || {};
       }
       if (touch) { // update touch information
         for (var i = 0; i < e.changedTouches.length; i++) {
+          for (var n = 0; n < touches.length; n++) {
+            if (e.changedTouches[i].identifier == touches[n].identifier) {
+              if (config('debug')) console.log('recieved double touchstart for ctrlID ' + ctrlID);
+              return; // ignore this event; // might be problematic if there is more than one changedTouches
+            }
+          }
           touches.push(e.changedTouches[i]);
         }
       } else {
@@ -206,7 +212,7 @@ var mousetouch = mousetouch || {};
       gesture.y = mousePos.y;
     }
     // detect transform gestures
-    if (touch){
+    if (touch) {
       gesture_touch_scale(gesture);
       gesture_touch_rotate(gesture);
     } else {
@@ -282,11 +288,11 @@ var mousetouch = mousetouch || {};
     if (temp_abort) return gesture_send(gesture);
     if (mousetouch.debug) console.log("temp_down");
     // detect if multiple clicks come from same button/finger
-    // if (temp_crtlID && temp_crtlID !== crtlID) { // WARNING: this probably does not work for touches
+    // if (temp_ctrlID && temp_ctrlID !== ctrlID) { // WARNING: this probably does not work for touches
     //   temp_gesture_abort();
     //   return gesture_send(gesture);
     // }
-    // temp_crtlID = crtlID;
+    // temp_ctrlID = ctrlID;
 
     if (temp_justpnr) { // this is a double click
       temp_justpnr = false;
@@ -336,11 +342,11 @@ var mousetouch = mousetouch || {};
     temp_long = false; // if long click waiting period is not finished yet, don't wait for it anymore
     if (temp_abort) return gesture_send(gesture);
     if (mousetouch.debug) console.log("temp_up"); // detect if multiple clicks come from same button/finger
-    // if (temp_crtlID && temp_crtlID !== crtlID) {
+    // if (temp_ctrlID && temp_ctrlID !== ctrlID) {
     //   temp_gesture_abort();
     //   return gesture_send(gesture);
     // }
-    // temp_crtlID = crtlID;
+    // temp_ctrlID = ctrlID;
 
     if (temp_justp) { // release after click -> maybe a double click
       var curID = temp_ID;
@@ -511,13 +517,13 @@ var mousetouch = mousetouch || {};
 
       // unified identifier for mouse button and fingers
       if (!touch && e.button !== undefined) {
-        crtlID = "btn" + e.button;
+        ctrlID = "btn" + e.button;
       }
       if (touch) {
-        crtlID = e.changedTouches[0].identifier;
+        ctrlID = e.changedTouches[0].identifier;
       }
 
-      console.log("event: " + e.type + ", crtlID: " + crtlID);
+      console.log("event: " + e.type + ", ctrlID: " + ctrlID);
 
       if (config('preventdefault') && (current !== undefined || e.type === 'mousedown' || e.type === 'touchstart')) {
         e.preventDefault();
