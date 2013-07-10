@@ -13,16 +13,31 @@
          });
 		});
 		function handler(gesture){
-			this.innerHTML=(gesture.first ? 'started<BR>' : '') +
-							(gesture.last ? 'finshed<BR>' : '') +
-							'pos: '+gesture.x + ","+gesture.y + 
-							(gesture.outside ? ' (outside)' : '') +
-							'<BR>' +
-							(gesture.doubleclick ? ' double-click<BR>' : '') +
-                     (gesture.start ? ' start: ' + gesture.start.x + ',' + gesture.start.y + '<BR>' : '') +
-							(gesture.shift ? ' shift: ' + gesture.shift.x + ',' + gesture.shift.y + '<BR>' : '') +
-							(gesture.scale ? ' scale: ' + gesture.scale + '<BR>' : '') +
-							(gesture.rotation ? ' rotation: ' + gesture.rotation + '<BR>' : '');
+			var s='';
+			for (var i in gesture) {
+				if (i == 'event') continue;
+				if (gesture[i] instanceof Array) {
+					s += i + ": " + gesture[i].join(':') + "<br>";
+
+				} else if (typeof(gesture[i]) == 'object') {
+					s += i + ": " + gesture[i].x + ", " + gesture[i].y + "<br>";
+				} else if (typeof(gesture[i]) == 'boolean') {
+					if (gesture[i]) s += i + "<br>";
+				} else {
+					s += i + ": " + gesture[i] + "<br>";
+				}
+			}
+			this.innerHTML = s;
+			// this.innerHTML = (gesture.first ? 'started<BR>' : '') +
+			// 				(gesture.last ? 'finshed<BR>' : '') +
+			// 				'pos: '+gesture.x + ","+gesture.y + 
+			// 				(gesture.outside ? ' (outside)' : '') +
+			// 				'<BR>' +
+			// 				(gesture.doubleclick ? ' double-click<BR>' : '') +
+   //                   (gesture.start ? ' start: ' + gesture.start.x + ',' + gesture.start.y + '<BR>' : '') +
+			// 				(gesture.shift ? ' shift: ' + gesture.shift.x + ',' + gesture.shift.y + '<BR>' : '') +
+			// 				(gesture.scale ? ' scale: ' + gesture.scale + '<BR>' : '') +
+			// 				(gesture.rotation ? ' rotation: ' + gesture.rotation + '<BR>' : '');
 							
 			console.log(gesture);
 			console.log(gesture.event);
