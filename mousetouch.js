@@ -241,7 +241,9 @@ var mousetouch = mousetouch || {};
       long: gestures_detected.hasOwnProperty('long'),
       multi: gestures_detected.hasOwnProperty('multi'),
       transform: gestures_detected.hasOwnProperty('transform'),
-      move: gestures_detected.hasOwnProperty('move')
+      move: gestures_detected.hasOwnProperty('move'),
+      buttons: mouseBtn.slice()
+
     }, true);
     // inject default values if not yet set
     add_properties(gesture, {
