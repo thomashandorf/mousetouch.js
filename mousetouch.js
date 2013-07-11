@@ -13,8 +13,9 @@ var mousetouch = mousetouch || {};
   __mousetouch_defined = true;
 
   // access mousetouch configuration properties either trough options hash provided at register or through mousetouch global object
-  var config = function(pt) {
+  var config = function(pt, element) {
     if (current !== undefined && elements[current].options[pt] !== undefined) return elements[current].options[pt];
+    if (element !== undefined && element.options[pt] !== undefined) return element.options[pt];
     if (mousetouch[pt] !== undefined) return mousetouch[pt];
     return undefined;
   }
@@ -382,7 +383,7 @@ var mousetouch = mousetouch || {};
     temp_ID++;
     temp_justp = false;
     temp_justpnr = false;
-    if (config('waitdoubleclick')) {
+    if (config('waitdoubleclick', temp_element)) {
       if (temp_downGesture) gesture_send(temp_downGesture, temp_element);
       if (temp_upGesture) gesture_send(temp_upGesture, temp_element);
     }
@@ -467,11 +468,11 @@ var mousetouch = mousetouch || {};
   // generalized event binding & handling without jquery or similar
   var bnd = function(elem, type, eventHandle, capture) {
     var handler = function(e) {
-      if (e.mousetouch){ // mousetouch has seen this event
+      if (e.mousetouch) { // mousetouch has seen this event
         if (config('debug')) console.log('mousetouch: multiple elements registered in bubble chain. currently only first element will be handled.');
         return;
       }
-      e.mousetouch=true; 
+      e.mousetouch = true;
       // touch detection
       touch = (e.changedTouches ? true : false);
       // start mouse events after touch events detection
@@ -531,7 +532,7 @@ var mousetouch = mousetouch || {};
         ctrlID = e.changedTouches[0].identifier;
       }
 
-      if (config('debug')) console.log("event: " + e.type + ", ctrlID: " + ctrlID);
+      if (config('debug') && current) console.log("event: " + e.type + ", ctrlID: " + ctrlID);
 
       if (config('preventdefault') && (current !== undefined || e.type === 'mousedown' || e.type === 'touchstart')) {
         e.preventDefault();
