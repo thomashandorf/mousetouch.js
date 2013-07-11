@@ -12,7 +12,14 @@ var mousetouch = mousetouch || {};
   if (__mousetouch_defined) return;
   __mousetouch_defined = true;
 
-  if (mousetouch.debug) console.log('mousetouch init');
+  // access mousetouch configuration properties either trough options hash provided at register or through mousetouch global object
+  var config = function(pt) {
+    if (current !== undefined && elements[current].options[pt] !== undefined) return elements[current].options[pt];
+    if (mousetouch[pt] !== undefined) return mousetouch[pt];
+    return undefined;
+  }
+
+  if (config('debug')) console.log('mousetouch init');
 
   var __mousetouch_defaults = {
     waitdoubleclick: false, // don't send out downs immidiately, wait whether it's going to be a double click
@@ -20,7 +27,7 @@ var mousetouch = mousetouch || {};
     preventdefault: false, // always call preventDefault on all observed events
     preventdefault_move: true, // prevent default on move events
     preventdefault_context: true, // prevent context menu
-    debug: true,
+    debug: false,
     double_ms: 300, // double click: time in which first up must occure AND time in which 2dn down must occur after 1st up
     long_ms: 500, // time to be considered as long click
     touchquarantine_ms: 1000 // how long to wait after touch event until a mouse event is not ignored anymore
@@ -108,7 +115,7 @@ var mousetouch = mousetouch || {};
   }
   // 2nd part gesture handling for down events (needed since temporal gestures may trigger further execution at a later time point)
   var gesture_down = function(e) {
-    if (mousetouch.debug) console.log("gesture_down");
+    if (config('debug')) console.log("gesture_down");
     var gesture = {
       last: false,
     };
@@ -157,7 +164,7 @@ var mousetouch = mousetouch || {};
   // handler for up events
   var gesture_up = function(e) {
     if (current === undefined) return; // not in a gesture
-    if (mousetouch.debug) console.log("up");
+    if (config('debug')) console.log("up");
     gesture_fill(lastGesture, e);
     if (touch) { // update touch information
       for (var i = 0; i < e.changedTouches.length; i++) {
@@ -186,7 +193,7 @@ var mousetouch = mousetouch || {};
   }
   var gesture_move = function(e) {
     if (current == undefined) return; // not in a gesture
-    if (mousetouch.debug) console.log("move");
+    if (config('debug')) console.log("move");
     temp_gesture_abort();
     gestures_detected.move = true;
     var gesture = lastGesture;
@@ -262,17 +269,17 @@ var mousetouch = mousetouch || {};
     // save current gesture
     if (!element) gesture_save(gesture); // this may destroy gesture state variables if reset is true
     // call client handler, should be called as the last step to avoid state corruption if client handler fails
-    if (mousetouch.debug) console.log("gesture_send");
+    if (config('debug')) console.log("gesture_send");
     el.handler.call(el.element, gesture);
   }
   // save gesture to lastGesture and reset some properties which are valid only one time
   var gesture_save = function(gesture) {
     if (reset) {
-      if (mousetouch.debug) console.log("gesture_reset");
+      if (config('debug')) console.log("gesture_reset");
       lastGesture = undefined;
       reset_state();
     } else {
-      if (mousetouch.debug) console.log("gesture_save");
+      if (config('debug')) console.log("gesture_save");
       lastGesture = dclone(gesture); // deep copy gesture object; client changes won't matter anymore
       lastGesture.cancel = false;
       lastGesture.first = false;
@@ -282,7 +289,7 @@ var mousetouch = mousetouch || {};
   // detects double and long clicks (down handler)
   var temp_gesture_down = function(gesture) {
     if (temp_abort) return gesture_send(gesture);
-    if (mousetouch.debug) console.log("temp_down");
+    if (config('debug')) console.log("temp_down");
     // detect if multiple clicks come from same button/finger
     // if (temp_ctrlID && temp_ctrlID !== ctrlID) { // WARNING: this probably does not work for touches
     //   temp_gesture_abort();
@@ -312,7 +319,7 @@ var mousetouch = mousetouch || {};
         setTimeout(function() { // start timer for doubleclick detection
           if (curID != temp_ID) return; // not my temp gesture anymore
           if (temp_justp) { // no up fired in waiting period and temporal gestures have not been aborted
-            if (mousetouch.debug) console.log("mousetouch justp timeout");
+            if (config('debug')) console.log("mousetouch justp timeout");
             temp_gesture_abort(true);
           }
           temp_justp = false;
@@ -320,7 +327,7 @@ var mousetouch = mousetouch || {};
         setTimeout(function() { // start timer for long click detection
           if (curGID != gestureID) return; // not my gesture anymore
           if (temp_long) { // warning, long click detection does not react on temp_abort; temp_long is falsified extra in temp_gesture_abort if not call with parameter true
-            if (mousetouch.debug) console.log("mousetouch long click timeout");
+            if (config('debug')) console.log("mousetouch long click timeout");
             gestures_detected.long = true;
           }
           temp_long = false;
@@ -337,7 +344,7 @@ var mousetouch = mousetouch || {};
   var temp_gesture_up = function(gesture) {
     temp_long = false; // if long click waiting period is not finished yet, don't wait for it anymore
     if (temp_abort) return gesture_send(gesture);
-    if (mousetouch.debug) console.log("temp_up"); // detect if multiple clicks come from same button/finger
+    if (config('debug')) console.log("temp_up"); // detect if multiple clicks come from same button/finger
     // if (temp_ctrlID && temp_ctrlID !== ctrlID) {
     //   temp_gesture_abort();
     //   return gesture_send(gesture);
@@ -352,7 +359,7 @@ var mousetouch = mousetouch || {};
       setTimeout(function() {
         if (curID != temp_ID) return; // not my temp gesture anymore
         if (temp_justpnr) { // waiting for next down period expired
-          if (mousetouch.debug) console.log("mousetouch justpnr timeout");
+          if (config('debug')) console.log("mousetouch justpnr timeout");
           temp_gesture_abort();
         }
         temp_justpnr = false;
@@ -370,7 +377,7 @@ var mousetouch = mousetouch || {};
   var temp_gesture_abort = function(dontabortlong) {
     if (!dontabortlong) temp_long = false;
     if (temp_abort) return;
-    if (mousetouch.debug) console.log("temp_abort");
+    if (config('debug')) console.log("temp_abort");
     if (current !== undefined) temp_abort = true; // only set temp_abort if currently in gesture
     temp_ID++;
     temp_justp = false;
@@ -524,7 +531,7 @@ var mousetouch = mousetouch || {};
         ctrlID = e.changedTouches[0].identifier;
       }
 
-      console.log("event: " + e.type + ", ctrlID: " + ctrlID);
+      if (config('debug')) console.log("event: " + e.type + ", ctrlID: " + ctrlID);
 
       if (config('preventdefault') && (current !== undefined || e.type === 'mousedown' || e.type === 'touchstart')) {
         e.preventDefault();
@@ -543,12 +550,6 @@ var mousetouch = mousetouch || {};
     }
   }
 
-  // access mousetouch configuration properties either trough options hash provided at register or through mousetouch global object
-  var config = function(pt) {
-    if (current !== undefined && elements[current].options[pt] !== undefined) return elements[current].options[pt];
-    if (mousetouch[pt] !== undefined) return mousetouch[pt];
-    return undefined;
-  }
   // tests if obj is plain object
   var isPlainObject = function(obj) {
     // Must be an Object.
