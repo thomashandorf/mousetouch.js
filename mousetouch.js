@@ -186,7 +186,11 @@ var mousetouch = mousetouch || {};
     } else {
       // finish gesture
       lastGesture.last = true;
-      lastGesture.click = !gestures_detected.move && !gestures_detected.multi;
+      if (!gestures_detected.move && !gestures_detected.multi) {
+        lastGesture.click = true;
+        lastGesture.doubleclick = !!gestures_detected.double;
+        lastGesture.longclick = !!gestures_detected.long;
+      }
       reset = true;
       // send after reseting state to ensure reset even if client handler breaks;
       temp_gesture_up(lastGesture); // this sends the gesture after handling possible temporal gestures; sending may be delayed
@@ -262,7 +266,9 @@ var mousetouch = mousetouch || {};
       rotation: 0,
       scale: 1,
       click: false,
-      cancel: false
+      cancel: false,
+      doubleclick: false,
+      longclick: false
     });
   }
   var gesture_send = function(gesture, element) {
