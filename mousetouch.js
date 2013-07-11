@@ -246,8 +246,8 @@ var mousetouch = mousetouch || {};
     add_properties(gesture, {
       event: e,
       shift: {
-        x: gesture.start.x - gesture.x,
-        y: gesture.start.y - gesture.y
+        x: gesture.x - gesture.start.x,
+        y: gesture.y - gesture.start.y
       },
       double: gestures_detected.hasOwnProperty('double'),
       long: gestures_detected.hasOwnProperty('long'),
