@@ -74,11 +74,7 @@ var mousetouch = mousetouch || {};
       options: (options ? options : {})
     };
     var down = function(e) { // handler for handling down events on the registered element
-      if (current !== undefined && elnr != current) {
-        console.log('mousetouch: multiple elements registered in bubble chain. will be implemented later.');
-        return;
-      }
-      if (mousetouch.debug) console.log("down");
+      if (config('debug')) console.log("down");
       if (current === undefined) {
         current = elnr; // indicates that a new gesture has started.
         gestureID++;
@@ -464,6 +460,11 @@ var mousetouch = mousetouch || {};
   // generalized event binding & handling without jquery or similar
   var bnd = function(elem, type, eventHandle, capture) {
     var handler = function(e) {
+      if (e.mousetouch){ // mousetouch has seen this event
+        if (config('debug')) console.log('mousetouch: multiple elements registered in bubble chain. currently only first element will be handled.');
+        return;
+      }
+      e.mousetouch=true; 
       // touch detection
       touch = (e.changedTouches ? true : false);
       // start mouse events after touch events detection
