@@ -31,7 +31,17 @@ var mousetouch = mousetouch || {};
     debug: false,
     double_ms: 300, // double click: time in which first up must occure AND time in which 2dn down must occur after 1st up
     long_ms: 500, // time to be considered as long click
-    touchquarantine_ms: 1000 // how long to wait after touch event until a mouse event is not ignored anymore
+    touchquarantine_ms: 1000, // how long to wait after touch event until a mouse event is not ignored anymore
+    mouserotateshift: true, // configure which modifiers will trigger mouse rotate / scale gesture ...
+    mouserotatealt: false,
+    mouserotatectrl: false,
+    mouserotatebtn1: false,
+    mouserotatebtn2: true,
+    mousescaleshift: false,
+    mousescalealt: false,
+    mousescalectrl: true,
+    mousescalebtn1: true,
+    mousescalebtn2: false,
   }
 
   // some private variables
@@ -188,8 +198,8 @@ var mousetouch = mousetouch || {};
       lastGesture.last = true;
       if (!gestures_detected.move && !gestures_detected.multi) {
         lastGesture.click = true;
-        lastGesture.doubleclick = !!gestures_detected.double;
-        lastGesture.longclick = !!gestures_detected.long;
+        lastGesture.doubleclick = !! gestures_detected.double;
+        lastGesture.longclick = !! gestures_detected.long;
       }
       reset = true;
       // send after reseting state to ensure reset even if client handler breaks;
@@ -219,13 +229,18 @@ var mousetouch = mousetouch || {};
       gesture.x = mousePos.x;
       gesture.y = mousePos.y;
     }
+    gesture.shift = {
+      x: gesture.x - gesture.start.x,
+      y: gesture.y - gesture.start.y
+    }
+
     // detect transform gestures
     if (touch) {
-      gesture_touch_scale(gesture);
-      gesture_touch_rotate(gesture);
+      gesture_touch_scale(gesture, e);
+      gesture_touch_rotate(gesture, e);
     } else {
-      // gesture_mouse_scale(gesture);
-      // gesture_mouse_rotate(gesture);
+      gesture_mouse_scale(gesture, e);
+      gesture_mouse_rotate(gesture, e);
       // gesture_mouse_scroll(gesture);
     }
 
@@ -249,10 +264,6 @@ var mousetouch = mousetouch || {};
     // inject further properties calculated from current gesture state
     add_properties(gesture, {
       event: e,
-      shift: {
-        x: gesture.x - gesture.start.x,
-        y: gesture.y - gesture.start.y
-      },
       double: gestures_detected.hasOwnProperty('double'),
       long: gestures_detected.hasOwnProperty('long'),
       multi: gestures_detected.hasOwnProperty('multi'),
@@ -268,7 +279,11 @@ var mousetouch = mousetouch || {};
       click: false,
       cancel: false,
       doubleclick: false,
-      longclick: false
+      longclick: false,
+      shift: {
+        x: 0,
+        y: 0
+      }
     });
   }
   var gesture_send = function(gesture, element) {
@@ -455,7 +470,46 @@ var mousetouch = mousetouch || {};
       gestures_detected.transform = true;
     }
   }
-
+  var gesture_mouse_scale = function(gesture, e) {
+    if (e.ctrlKey && config('mousescalectrl') ||
+      e.altKey && config('mousescalealt') ||
+      e.shiftKey && config('mousescaleshift') ||
+      e.button == 1 && config('mousescalebtn1') ||
+      e.button == 2 && config('mousescalebtn2')) {
+      gestures_detected.transform = true;
+      gesture.scale = Math.pow(2, 4 * (gesture.x - gesture.y - gesture.start.x + gesture.start.y) / (elements[current].element.clientWidth + elements[current].element.clientHeight));
+      gesture.shift = {
+        x: 0,
+        y: 0
+      };
+    }
+  }
+  var gesture_mouse_rotate = function(gesture, e) {
+    if (e.ctrlKey && config('mouserotatectrl') ||
+      e.altKey && config('mouserotatealt') ||
+      e.shiftKey && config('mouserotateshift') ||
+      e.button == 1 && config('mouserotatebtn1') ||
+      e.button == 2 && config('mouserotatebtn2')) {
+      if (vec.norm(vec.diff(gesture.start, gesture)) > 15) {
+        var dx = (gesture.start.x - gesture.x);
+        var dy = (gesture.start.y - gesture.y);
+        if (transf_startrot === undefined) {
+          transf_startrot = Math.atan2(dy, dx); // initial rotation
+          return;
+        }
+        gestures_detected.transform = true;
+        var now = Math.atan2(dy, dx); // current rotation
+        var drot = now - transf_startrot;
+        if (drot > Math.PI) drot -= 2 * Math.PI;
+        if (drot < -Math.PI) drot += 2 * Math.PI;
+        gesture.rotation = 180 * drot / Math.PI
+      }
+      gesture.shift = {
+        x: 0,
+        y: 0
+      };
+    }
+  }
   // Internet Explorer version detection, http://gist.github.com/527683
   var IE_ver = (function() {
 
