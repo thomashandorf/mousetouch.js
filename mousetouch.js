@@ -490,20 +490,24 @@ var mousetouch = mousetouch || {};
       e.shiftKey && config('mouserotateshift') ||
       e.button == 1 && config('mouserotatebtn1') ||
       e.button == 2 && config('mouserotatebtn2')) {
-      if (vec.norm(vec.diff(gesture.start, gesture)) > 15) {
-        var dx = (gesture.start.x - gesture.x);
-        var dy = (gesture.start.y - gesture.y);
-        if (transf_startrot === undefined) {
-          transf_startrot = Math.atan2(dy, dx); // initial rotation
-          return;
-        }
-        gestures_detected.transform = true;
-        var now = Math.atan2(dy, dx); // current rotation
-        var drot = now - transf_startrot;
-        if (drot > Math.PI) drot -= 2 * Math.PI;
-        if (drot < -Math.PI) drot += 2 * Math.PI;
-        gesture.rotation = 180 * drot / Math.PI
-      }
+      // if (vec.norm(vec.diff(gesture.start, gesture)) > 15) {
+      //   var dx = (gesture.start.x - gesture.x);
+      //   var dy = (gesture.start.y - gesture.y);
+      //   if (transf_startrot === undefined) {
+      //     transf_startrot = Math.atan2(dy, dx); // initial rotation
+      //     return;
+      //   }
+      //   gestures_detected.transform = true;
+      //   var now = Math.atan2(dy, dx); // current rotation
+      //   var drot = now - transf_startrot;
+      //   if (drot > Math.PI) drot -= 2 * Math.PI;
+      //   if (drot < -Math.PI) drot += 2 * Math.PI;
+      //   gesture.rotation = 180 * drot / Math.PI
+      // }
+      gestures_detected.transform = true;
+      gesture.rotation = (gesture.x - gesture.y - gesture.start.x + gesture.start.y) / (elements[current].element.clientWidth + elements[current].element.clientHeight) * 4 * 360;
+      while (gesture.rotation < 0) gesture.rotation += 360;
+      while (gesture.rotation > 360) gesture.rotation -= 360;
       gesture.shift = {
         x: 0,
         y: 0
