@@ -338,8 +338,8 @@ var mousetouch = mousetouch || {};
       transform: gestures_detected.hasOwnProperty('transform'),
       move: gestures_detected.hasOwnProperty('move'),
       wheel: gestures_detected.hasOwnProperty('wheel'),
-      buttons: mouseBtn.slice()
-
+      buttons: mouseBtn.slice(),
+      touch: touch
     }, true);
     // inject default values if not yet set
     add_properties(gesture, {
