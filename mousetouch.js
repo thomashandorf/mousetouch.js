@@ -28,6 +28,7 @@ var mousetouch = mousetouch || {};
     preventdefault: false, // always call preventDefault on all observed events
     preventdefault_move: true, // prevent default on move events
     preventdefault_context: true, // prevent context menu
+    preventDefault_wheel: true, // prevent default wheel operation (only if wheelscale or wheelymove actuall hit)
     debug: false,
     double_ms: 300, // double click: time in which first up must occure AND time in which 2dn down must occur after 1st up
     long_ms: 500, // time to be considered as long click
@@ -42,6 +43,17 @@ var mousetouch = mousetouch || {};
     mousescalectrl: true,
     mousescalebtn1: true,
     mousescalebtn2: false,
+    wheelymovectrl: false,
+    wheelymovealt: false,
+    wheelymoveshift: false,
+    wheelymove: true,
+    wheelymovedelta: 20,
+    wheelscalectrl: true,
+    wheelscalealt: true,
+    wheelscaleshift: false,
+    wheelscale: false,
+    wheelscaledelta: 1.2
+
   }
 
   // some private variables
@@ -63,7 +75,7 @@ var mousetouch = mousetouch || {};
     in_touch = false;
 
   // mousetouch state variables
-  var current, mousePos, touch, touches, mouseBtn, ctrlID, temp_long, temp_abort, gestures_detected, reset, transf_startd, transf_startrot;
+  var current, mousePos, touch, touches, mouseBtn, ctrlID, temp_long, temp_abort, no_temp, gestures_detected, reset, transf_startd, transf_startrot;
   var reset_state = function() {
     current = undefined; // index of gesture recieving element into elements array
     mousePos = {
@@ -78,6 +90,7 @@ var mousetouch = mousetouch || {};
     reset = false;
     temp_long = false; // not yet pressed long enough for long click
     temp_abort = false; // stop detecting temporal gestures for current gesture
+    no_temp = false; // no temporal gestures
     transf_startd = undefined;
     transf_startrot = undefined;
   }
@@ -116,6 +129,14 @@ var mousetouch = mousetouch || {};
       // needed as "up" handler needs to call "down" handler if gesture is not finished and in this case the state updates from above should not be executed
       gesture_down(e);
     }
+    var wheel = function(e) {
+      if (config('debug')) console.log("wheel");
+      if (current === undefined) {
+        current = elnr; // indicates that a new gesture has started.
+        gestureID++;
+      }
+      gesture_wheel(e);
+    }
     bnd(element, "mousedown", down, false);
     bnd(element, "touchstart", down, false);
     if (config('preventdefault_context')) {
@@ -123,6 +144,8 @@ var mousetouch = mousetouch || {};
         e.preventDefault()
       }, false);
     }
+    bnd(element, "mousewheel", wheel);
+    bnd(element, "DOMMouseScroll", wheel);
   }
   // 2nd part gesture handling for down events (needed since temporal gestures may trigger further execution at a later time point)
   var gesture_down = function(e) {
@@ -134,9 +157,10 @@ var mousetouch = mousetouch || {};
     // with the new one 
     // e.g. transition from single touch to double touch
     if (lastGesture && config('cancelgestures')) { // send a cancel gesture
-      gesture_cancel();
+      gesture_cancel(); // this also does temp_gesture_abort();
       gesture.first = true;
     } else if (lastGesture) {
+      temp_gesture_abort();
       gesture.cancel = true; // don't send a extra cancel gesture; just set cancel property in current
     } else {
       gesture.first = true; // no current gesture, so this is a new one
@@ -196,7 +220,7 @@ var mousetouch = mousetouch || {};
     } else {
       // finish gesture
       lastGesture.last = true;
-      if (!gestures_detected.move && !gestures_detected.multi) {
+      if (!gestures_detected.move && !gestures_detected.multi && !gestures_detected.wheel) {
         lastGesture.click = true;
         lastGesture.doubleclick = !! gestures_detected.double;
         lastGesture.longclick = !! gestures_detected.long;
@@ -254,6 +278,50 @@ var mousetouch = mousetouch || {};
 
     gesture_send(gesture);
   }
+  var gesture_wheel = function(e) {
+    no_temp = true; // disable temporal gestures (i.e. no double click for wheels)
+    gesture_down(e); // send a down gesture
+    gestures_detected.wheel = true;
+    var gesture = lastGesture;
+    var delta;
+    if (e.wheelDelta) { /* IE/Opera. */
+      delta = e.wheelDelta / 120;
+    } else if (e.detail) { /** Mozilla case. */
+      /** In Mozilla, sign of delta is different than in IE.
+       * Also, delta is multiple of 3.
+       */
+      delta = -e.detail / 3;
+    }
+    // should we send a scaling gesture?
+    if (e.ctrlKey && config('wheelscalectrl') ||
+      e.altKey && config('wheelscalealt') ||
+      e.shiftKey && config('wheelscaleshift') || !e.shiftKey && !e.ctrlKey && !e.altKey && config('wheelscale')) {
+      gesture.scale = Math.pow(config('wheelscaledelta'), delta);
+      gestures_detected.tranform = true;
+      if (config('preventdefault_wheel')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+    // should we send a ymove gesture (y-scrolling)
+    if (e.ctrlKey && config('wheelymovectrl') ||
+      e.altKey && config('wheelymovealt') ||
+      e.shiftKey && config('wheelymoveshift') || !e.shiftKey && !e.ctrlKey && !e.altKey && config('wheelymove')) {
+      gesture.shift = {
+        x: 0,
+        y: delta * config('wheelymovedelta')
+      };
+      gestures_detected.move = true;
+      if (config('preventdefault_wheel')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+    gesture.wheeldelta = delta; // just save the delta value in gesture.wheeldelta so that clients can use it
+    gesture_fill(gesture, e);
+    gesture_send(gesture); // send to gestures (one move /scale + one up) as this is consistent with non wheel gestures
+    gesture_up(e);
+  }
   var gesture_cancel = function() {
     temp_gesture_abort();
     lastGesture.cancel = true;
@@ -269,6 +337,7 @@ var mousetouch = mousetouch || {};
       multi: gestures_detected.hasOwnProperty('multi'),
       transform: gestures_detected.hasOwnProperty('transform'),
       move: gestures_detected.hasOwnProperty('move'),
+      wheel: gestures_detected.hasOwnProperty('wheel'),
       buttons: mouseBtn.slice()
 
     }, true);
@@ -283,7 +352,8 @@ var mousetouch = mousetouch || {};
       shift: {
         x: 0,
         y: 0
-      }
+      },
+      wheeldelta: 0
     });
   }
   var gesture_send = function(gesture, element) {
@@ -310,7 +380,7 @@ var mousetouch = mousetouch || {};
   }
   // detects double and long clicks (down handler)
   var temp_gesture_down = function(gesture) {
-    if (temp_abort) return gesture_send(gesture);
+    if (temp_abort || no_temp) return gesture_send(gesture);
     if (config('debug')) console.log("temp_down");
     // detect if multiple clicks come from same button/finger
     // if (temp_ctrlID && temp_ctrlID !== ctrlID) { // WARNING: this probably does not work for touches
@@ -365,7 +435,7 @@ var mousetouch = mousetouch || {};
   // detects double and long clicks (up handler)
   var temp_gesture_up = function(gesture) {
     temp_long = false; // if long click waiting period is not finished yet, don't wait for it anymore
-    if (temp_abort) return gesture_send(gesture);
+    if (temp_abort || no_temp) return gesture_send(gesture);
     if (config('debug')) console.log("temp_up"); // detect if multiple clicks come from same button/finger
     // if (temp_ctrlID && temp_ctrlID !== ctrlID) {
     //   temp_gesture_abort();
