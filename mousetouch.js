@@ -280,8 +280,8 @@ var mousetouch = mousetouch || {};
   }
   var gesture_wheel = function(e) {
     no_temp = true; // disable temporal gestures (i.e. no double click for wheels)
-    gesture_down(e); // send a down gesture
     gestures_detected.wheel = true;
+    gesture_down(e); // send a down gesture
     var gesture = lastGesture;
     var delta;
     if (e.wheelDelta) { /* IE/Opera. */
