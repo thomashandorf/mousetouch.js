@@ -311,6 +311,7 @@ var mousetouch = mousetouch || {};
         x: 0,
         y: delta * config('wheelymovedelta')
       };
+      gesture.y += gesture.shift.y;
       gestures_detected.move = true;
       if (config('preventdefault_wheel')) {
         e.preventDefault();
