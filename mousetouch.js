@@ -354,7 +354,10 @@ var mousetouch = mousetouch || {};
         x: 0,
         y: 0
       },
-      wheeldelta: 0
+      wheeldelta: 0,
+      altKey: e.altKey,
+      ctrlKey: e.ctrlKey,
+      shiftKey: e.shiftKey
     });
   }
   var gesture_send = function(gesture, element) {
