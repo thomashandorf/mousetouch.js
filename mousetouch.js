@@ -48,6 +48,11 @@ var mousetouch = mousetouch || {};
     wheelymoveshift: false,
     wheelymove: true,
     wheelymovedelta: 20,
+    wheelxmovectrl: false,
+    wheelxmovealt: false,
+    wheelxmoveshift: true,
+    wheelxmove: false,
+    wheelxmovedelta: 20,
     wheelscalectrl: true,
     wheelscalealt: true,
     wheelscaleshift: false,
@@ -312,6 +317,21 @@ var mousetouch = mousetouch || {};
         y: delta * config('wheelymovedelta')
       };
       gesture.y += gesture.shift.y;
+      gestures_detected.move = true;
+      if (config('preventdefault_wheel')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+    // should we send a xmove gesture (x-scrolling)
+    if (e.ctrlKey && config('wheelxmovectrl') ||
+      e.altKey && config('wheelxmovealt') ||
+      e.shiftKey && config('wheelxmoveshift') || !e.shiftKey && !e.ctrlKey && !e.altKey && config('wheelxmove')) {
+      gesture.shift = {
+        x: delta * config('wheelxmovedelta'),
+        y: 0
+      };
+      gesture.x += gesture.shift.x;
       gestures_detected.move = true;
       if (config('preventdefault_wheel')) {
         e.preventDefault();
