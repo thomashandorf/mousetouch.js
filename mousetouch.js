@@ -144,7 +144,7 @@ var mousetouch = mousetouch || {};
     }
     bnd(element, "mousedown", down, false);
     bnd(element, "touchstart", down, false);
-    if (config('preventdefault_context')) {
+    if (config('preventdefault_context', elements[elnr])) {
       bnd(element, "contextmenu", function(e) {
         e.preventDefault()
       }, false);
